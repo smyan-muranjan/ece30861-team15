@@ -43,9 +43,3 @@ jobs:
       # Step 7: Run tests with coverage
       - name: Run pytest
         run: pytest --cov=src --cov-report=term-missing
-
-      # Step 8: Upload coverage report (optional but nice)
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true
