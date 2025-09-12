@@ -16,7 +16,7 @@ case "$1" in
     install)
         echo "Installing dependencies..."
         python3 -m pip install --upgrade pip
-        pip3 install --user -r "$PROJECT_ROOT/requirements.txt"
+        pip3 install -r "$PROJECT_ROOT/requirements.txt"
         echo "Installation complete."
         exit 0
         ;;
@@ -25,7 +25,7 @@ case "$1" in
         # The project spec requires a specific output format for the test command.
         # We will implement the logic for this in a later task.
         # For now, we just run pytest.
-        python3 -m pytest
+        python3 -m pytest "$PROJECT_ROOT/tests"
         ;;
     *)
         # If the argument is a file, process it. Otherwise, show usage.
