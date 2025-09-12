@@ -2,16 +2,19 @@ import os
 import json
 from src import main
 
+
 def test_main_runs():
     # This test is a bit obsolete now, but we keep it as a basic sanity check
     # We will expand our E2E tests later.
     pass
 
+
 def test_parse_url_file_success():
     """Tests that the URL parser correctly reads a valid file."""
     # Create a dummy URL file
     file_path = "test_urls.txt"
-    urls_to_write = ["https://github.com/test/repo1", "https://huggingface.co/model2"]
+    urls_to_write = ["https://github.com/test/repo1",
+                     "https://huggingface.co/model2"]
     with open(file_path, "w") as f:
         for url in urls_to_write:
             f.write(url + "\n")
@@ -21,6 +24,7 @@ def test_parse_url_file_success():
 
     # Clean up the dummy file
     os.remove(file_path)
+
 
 def test_process_urls_placeholder():
     """
@@ -34,7 +38,8 @@ def test_process_urls_placeholder():
     old_stdout = sys.stdout
     sys.stdout = captured_output = StringIO()
 
-    urls = ["https://github.com/test/repo1", "https://huggingface.co/model2"]
+    urls = ["https://github.com/test/repo1",
+            "https://huggingface.co/model2"]
     main.process_urls(urls)
 
     sys.stdout = old_stdout  # Reset stdout

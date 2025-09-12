@@ -42,7 +42,8 @@ def parse_url_file(file_path: str) -> List[str]:
         return urls
     except FileNotFoundError:
         logging.error(f"Error: URL file not found at '{file_path}'.")
-        print(f"Error: URL file not found at '{file_path}'. Please check the path.", file=sys.stderr)
+        print(f"Error: URL file not found at '{file_path}'." +
+              " Please check the path.", file=sys.stderr)
         sys.exit(1)
 
 
@@ -54,13 +55,27 @@ def process_urls(urls: List[str]) -> None:
     logging.info(f"Processing {len(urls)} URLs.")
     for url in urls:
         scorecard: Dict[str, Any] = {
-            "name": url.split("/")[-1], "category": "MODEL", "url": url, "net_score": 0.75,
-            "net_score_latency": 150, "ramp_up_time": 0.8, "ramp_up_time_latency": 20,
-            "bus_factor": 0.6, "bus_factor_latency": 30, "performance_claims": 0.9,
-            "performance_claims_latency": 15, "license": 1.0, "license_latency": 5,
-            "size_score": {"raspberry_pi": 1.0, "jetson_nano": 1.0, "desktop_pc": 1.0, "aws_server": 1.0},
-            "size_score_latency": 10, "dataset_and_code_score": 0.7, "dataset_and_code_score_latency": 25,
-            "dataset_quality": 0.8, "dataset_quality_latency": 20, "code_quality": 0.6,
+            "name": url.split("/")[-1],
+            "category": "MODEL",
+            "url": url,
+            "net_score": 0.75,
+            "net_score_latency": 150,
+            "ramp_up_time": 0.8,
+            "ramp_up_time_latency": 20,
+            "bus_factor": 0.6,
+            "bus_factor_latency": 30,
+            "performance_claims": 0.9,
+            "performance_claims_latency": 15,
+            "license": 1.0,
+            "license_latency": 5,
+            "size_score": {"raspberry_pi": 1.0, "jetson_nano": 1.0,
+                           "desktop_pc": 1.0, "aws_server": 1.0},
+            "size_score_latency": 10,
+            "dataset_and_code_score": 0.7,
+            "dataset_and_code_score_latency": 25,
+            "dataset_quality": 0.8,
+            "dataset_quality_latency": 20,
+            "code_quality": 0.6,
             "code_quality_latency": 25,
         }
         print(json.dumps(scorecard))
