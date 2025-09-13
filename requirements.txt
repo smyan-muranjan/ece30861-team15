@@ -8,3 +8,6 @@ isort
 
 # Type Checking
 mypy
+
+# Implementation
+huggingface_hub
