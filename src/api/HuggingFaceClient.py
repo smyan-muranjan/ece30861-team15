@@ -41,9 +41,18 @@ class HuggingFaceClient:
         :return: DatasetStats with likes and downloads
         """
         info = self.api.dataset_info(repo_id)
-        normalized_likes = self.normalize_log(info.likes, MAX_DATASET_LIKES)
-        normalized_downloads = self.normalize_log(info.downloads, MAX_DATASET_DOWNLOADS)
-        return DatasetStats(normalized_likes=normalized_likes, normalized_downloads=normalized_downloads)
+        normalized_likes = self.normalize_log(
+            info.likes,
+            MAX_DATASET_LIKES
+            )
+        normalized_downloads = self.normalize_log(
+            info.downloads,
+            MAX_DATASET_DOWNLOADS
+            )
+        return DatasetStats(
+            normalized_likes=normalized_likes,
+            normalized_downloads=normalized_downloads
+            )
 
     def download_file(
         self, repo_id: str, filename: str, local_dir: str = "./"
