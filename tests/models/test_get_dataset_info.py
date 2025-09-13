@@ -23,10 +23,10 @@ class TestGetDatasetInfo(unittest.TestCase):
              patch('src.constants.MAX_DATASET_DOWNLOADS', 10000):
             stats = self.client.get_dataset_info('namespace/dataset_name')
             self.assertIsInstance(stats, DatasetStats)
-            self.assertGreaterEqual(stats.likes, 0)
-            self.assertLessEqual(stats.likes, 1)
-            self.assertGreaterEqual(stats.downloads, 0)
-            self.assertLessEqual(stats.downloads, 1)
+            self.assertGreaterEqual(stats.normalized_likes, 0)
+            self.assertLessEqual(stats.normalized_likes, 1)
+            self.assertGreaterEqual(stats.normalized_downloads, 0)
+            self.assertLessEqual(stats.normalized_downloads, 1)
 
     def test_zero_likes_and_downloads(self):
         mock_info = MagicMock()
@@ -36,8 +36,8 @@ class TestGetDatasetInfo(unittest.TestCase):
         with patch('src.constants.MAX_DATASET_LIKES', 1000), \
              patch('src.constants.MAX_DATASET_DOWNLOADS', 10000):
             stats = self.client.get_dataset_info('namespace/dataset_name')
-            self.assertEqual(stats.likes, 0.0)
-            self.assertEqual(stats.downloads, 0.0)
+            self.assertEqual(stats.normalized_likes, 0.0)
+            self.assertEqual(stats.normalized_downloads, 0.0)
 
     def test_large_likes_and_downloads(self):
         mock_info = MagicMock()
@@ -47,8 +47,8 @@ class TestGetDatasetInfo(unittest.TestCase):
         with patch('src.constants.MAX_DATASET_LIKES', 1000), \
              patch('src.constants.MAX_DATASET_DOWNLOADS', 10000):
             stats = self.client.get_dataset_info('namespace/dataset_name')
-            self.assertEqual(stats.likes, 1.0)
-            self.assertEqual(stats.downloads, 1.0)
+            self.assertEqual(stats.normalized_likes, 1.0)
+            self.assertEqual(stats.normalized_downloads, 1.0)
 
     def test_negative_likes_and_downloads(self):
         mock_info = MagicMock()
@@ -58,8 +58,8 @@ class TestGetDatasetInfo(unittest.TestCase):
         with patch('src.constants.MAX_DATASET_LIKES', 1000), \
              patch('src.constants.MAX_DATASET_DOWNLOADS', 10000):
             stats = self.client.get_dataset_info('namespace/dataset_name')
-            self.assertEqual(stats.likes, 0.0)
-            self.assertEqual(stats.downloads, 0.0)
+            self.assertEqual(stats.normalized_likes, 0.0)
+            self.assertEqual(stats.normalized_downloads, 0.0)
 
     def test_api_exception(self):
         self.mock_api.dataset_info.side_effect = Exception('API error')
