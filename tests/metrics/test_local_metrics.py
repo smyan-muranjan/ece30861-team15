@@ -1,15 +1,16 @@
 import os
-import tempfile
 import shutil
-import time
 import stat
-from pathlib import Path
+import tempfile
+import time
 import unittest
+from pathlib import Path
 from unittest.mock import patch
-from git import Repo, Actor
 
-from src.metrics.local_metrics import LocalMetricsCalculator
+from git import Actor, Repo
+
 from src.api.GitClient import CommitStats
+from src.metrics.local_metrics import LocalMetricsCalculator
 
 
 class TestLocalMetricsCalculator(unittest.TestCase):

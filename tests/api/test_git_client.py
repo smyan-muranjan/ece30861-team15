@@ -1,14 +1,15 @@
 import os
-import tempfile
 import shutil
-import time
 import stat
-from pathlib import Path
+import tempfile
+import time
 import unittest
-from git import Repo, Actor
+from pathlib import Path
 
-from src.api.GitClient import GitClient, \
-    CommitStats, CodeQualityStats, RampUpStats
+from git import Actor, Repo
+
+from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
+                               RampUpStats)
 
 
 class TestGitClient(unittest.TestCase):

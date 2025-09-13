@@ -1,12 +1,12 @@
-import os
-import tempfile
 import logging
-import subprocess
-from typing import Dict, List, Optional
-from dataclasses import dataclass
-from pathlib import Path
+import os
 import shutil
+import subprocess
+import tempfile
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from git import Repo
 
@@ -82,10 +82,11 @@ class GitClient:
             commits = list(repo.iter_commits(since=since_date))
 
             # Count commits by author
-            contributors = {}
+            contributors: Dict[str, int] = {}
             for commit in commits:
                 author = commit.author.name
-                contributors[author] = contributors.get(author, 0) + 1
+                if author:  # Skip commits with no author name
+                    contributors[author] = contributors.get(author, 0) + 1
 
             # Calculate bus factor using Herfindahl-Hirschman Index
             total_commits = len(commits)
@@ -95,7 +96,7 @@ class GitClient:
                 )
 
             # Get top 10 contributors
-            top_contributors = sorted(
+            top_contributors: List[tuple[str, int]] = sorted(
                 contributors.items(), key=lambda x: x[1], reverse=True
             )[:10]
 

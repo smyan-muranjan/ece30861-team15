@@ -1,15 +1,16 @@
 import os
-import tempfile
 import shutil
-import time
 import stat
-from pathlib import Path
+import tempfile
+import time
 import unittest
-from unittest.mock import patch, MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 from git import Repo
 
-from src.api.GitClient import GitClient, \
-    CommitStats, CodeQualityStats, RampUpStats
+from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
+                               RampUpStats)
 
 
 class TestGitClientCoverage(unittest.TestCase):
