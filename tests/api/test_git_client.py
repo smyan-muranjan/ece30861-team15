@@ -5,6 +5,8 @@ import time
 import stat
 from pathlib import Path
 import unittest
+from unittest.mock import patch, MagicMock
+from datetime import datetime
 from git import Repo, Actor
 
 from src.api.GitClient import GitClient, CommitStats, CodeQualityStats, RampUpStats

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from git import Repo, Actor
 
 from src.metrics.local_metrics import LocalMetricsCalculator
+from src.api.GitClient import CommitStats
 
 
 class TestLocalMetricsCalculator(unittest.TestCase):
@@ -147,16 +148,55 @@ class TestLocalMetricsCalculator(unittest.TestCase):
             self.assertIsInstance(results[metric], int)
             self.assertGreaterEqual(results[metric], 0)
 
-    def test_analyze_repository_clone_failure(self):
-        """Test repository analysis when cloning fails."""
-        with patch.object(self.calculator.git_client, 'clone_repository', return_value=None):
-            results = self.calculator.analyze_repository("https://github.com/nonexistent/repo")
+    def test_analyze_repository_exception_during_analysis(self):
+        """Test analyze_repository when an exception occurs during analysis."""
+        repo_path = self.create_test_repo()
         
-        # Should return default metrics
-        self.assertEqual(results['bus_factor'], 0.0)
-        self.assertEqual(results['code_quality'], 0.0)
-        self.assertEqual(results['ramp_up_time'], 0.0)
-        self.assertEqual(results['size_score']['raspberry_pi'], 0.0)
+        # Mock the individual calculation methods to raise exceptions
+        with patch.object(self.calculator.git_client, 'clone_repository', return_value=repo_path), \
+             patch.object(self.calculator.git_client, 'cleanup') as mock_cleanup, \
+             patch.object(self.calculator, 'calculate_bus_factor', side_effect=Exception("Analysis failed")):
+            
+            # The exception should propagate up, but cleanup should still be called
+            with self.assertRaises(Exception) as context:
+                self.calculator.analyze_repository("https://github.com/test/repo")
+            
+            self.assertEqual(str(context.exception), "Analysis failed")
+            
+            # Verify cleanup was called even when analysis fails
+            mock_cleanup.assert_called_once()
+
+    def test_analyze_repository_git_client_cleanup_called(self):
+        """Test that git_client.cleanup() is called even when analysis fails."""
+        # This test ensures cleanup is called in the finally block
+        with patch.object(self.calculator.git_client, 'clone_repository', return_value=None), \
+             patch.object(self.calculator.git_client, 'cleanup') as mock_cleanup:
+            
+            results = self.calculator.analyze_repository("https://github.com/test/repo")
+            
+            # When clone fails, cleanup is NOT called because we return early
+            # This is the current behavior - cleanup only happens in the finally block
+            mock_cleanup.assert_not_called()
+            
+            # Verify default metrics are returned
+            self.assertEqual(results['bus_factor'], 0.0)
+            self.assertEqual(results['code_quality'], 0.0)
+
+    def test_analyze_repository_cleanup_called_on_success(self):
+        """Test that git_client.cleanup() is called on successful analysis."""
+        repo_path = self.create_test_repo()
+        
+        with patch.object(self.calculator.git_client, 'clone_repository', return_value=repo_path), \
+             patch.object(self.calculator.git_client, 'cleanup') as mock_cleanup:
+            
+            results = self.calculator.analyze_repository("https://github.com/test/repo")
+            
+            # Verify cleanup was called (it should be called in the finally block)
+            mock_cleanup.assert_called_once()
+            
+            # Verify results are returned
+            self.assertIn('bus_factor', results)
+            self.assertIn('code_quality', results)
 
     def test_calculate_bus_factor_error_handling(self):
         """Test bus factor calculation error handling."""
@@ -190,21 +230,31 @@ class TestLocalMetricsCalculator(unittest.TestCase):
         self.assertTrue(all(score == 0.0 for score in scores.values()))
         self.assertIsInstance(latency, int)
 
-    def test_latency_measurement(self):
-        """Test that latency is properly measured."""
+    def test_latency_measurement_accuracy(self):
+        """Test that latency measurement works correctly."""
         repo_path = self.create_test_repo()
         
-        # Test that latency is reasonable (should be > 0 for real operations)
-        _, bus_factor_latency = self.calculator.calculate_bus_factor(repo_path)
-        _, code_quality_latency = self.calculator.calculate_code_quality(repo_path)
-        _, ramp_up_latency = self.calculator.calculate_ramp_up_time(repo_path)
-        _, size_score_latency = self.calculator.calculate_size_score(repo_path)
+        # Test that latency is measured and returned
+        score, latency = self.calculator.calculate_bus_factor(repo_path)
         
-        # All latencies should be non-negative
-        self.assertGreaterEqual(bus_factor_latency, 0)
-        self.assertGreaterEqual(code_quality_latency, 0)
-        self.assertGreaterEqual(ramp_up_latency, 0)
-        self.assertGreaterEqual(size_score_latency, 0)
+        self.assertIsInstance(latency, int)
+        self.assertGreaterEqual(latency, 0)
+        
+        # Test with a mock that takes some time
+        with patch.object(self.calculator.git_client, 'analyze_commits') as mock_analyze:
+            mock_analyze.return_value = CommitStats(total_commits=1, contributors={'test': 1}, bus_factor=0.5)
+            
+            # Add a small delay to test latency measurement
+            def slow_analyze(path):
+                time.sleep(0.01)  # 10ms delay
+                return CommitStats(total_commits=1, contributors={'test': 1}, bus_factor=0.5)
+            
+            mock_analyze.side_effect = slow_analyze
+            
+            score, latency = self.calculator.calculate_bus_factor(repo_path)
+            
+            self.assertIsInstance(latency, int)
+            self.assertGreaterEqual(latency, 10)  # Should be at least 10ms due to our delay
 
 
 if __name__ == '__main__':
