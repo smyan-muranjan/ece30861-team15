@@ -11,3 +11,6 @@ mypy
 
 # Implementation
 huggingface_hub
+PyGithub
+GitPython
+requests
