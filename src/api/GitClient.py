@@ -119,6 +119,10 @@ class GitClient:
         :return: CodeQualityStats object
         """
         try:
+            # Check if path exists first
+            if not os.path.exists(repo_path):
+                return CodeQualityStats(has_tests=False, lint_errors=0, code_quality_score=0.0)
+            
             repo_path_obj = Path(repo_path)
             
             # Check for test directories/files
@@ -171,6 +175,15 @@ class GitClient:
         :return: RampUpStats object
         """
         try:
+            # Check if path exists first
+            if not os.path.exists(repo_path):
+                return RampUpStats(
+                    has_examples=False,
+                    has_dependencies=False,
+                    readme_quality=0.0,
+                    ramp_up_score=0.0
+                )
+            
             repo_path_obj = Path(repo_path)
             
             # Check for example code
@@ -240,6 +253,15 @@ class GitClient:
         :return: Dictionary with hardware compatibility scores
         """
         try:
+            # Check if path exists first
+            if not os.path.exists(repo_path):
+                return {
+                    'raspberry_pi': 0.0,
+                    'jetson_nano': 0.0,
+                    'desktop_pc': 0.0,
+                    'aws_server': 0.0
+                }
+            
             repo_path_obj = Path(repo_path)
             
             # Calculate total size of repository
