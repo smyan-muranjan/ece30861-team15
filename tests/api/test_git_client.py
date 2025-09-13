@@ -5,11 +5,10 @@ import time
 import stat
 from pathlib import Path
 import unittest
-from unittest.mock import patch, MagicMock
-from datetime import datetime
 from git import Repo, Actor
 
-from src.api.GitClient import GitClient, CommitStats, CodeQualityStats, RampUpStats
+from src.api.GitClient import GitClient, \
+    CommitStats, CodeQualityStats, RampUpStats
 
 
 class TestGitClient(unittest.TestCase):
@@ -27,13 +26,13 @@ class TestGitClient(unittest.TestCase):
         self.git_client.cleanup()
 
     def _force_remove_directory(self, path):
-        """Force remove directory with retries for Windows file locking issues."""
+        """remove directory with retries for Windows file locking."""
         def handle_remove_readonly(func, path, exc):
             """Handle readonly files on Windows."""
             if os.path.exists(path):
                 os.chmod(path, stat.S_IWRITE)
                 func(path)
-        
+
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -43,29 +42,29 @@ class TestGitClient(unittest.TestCase):
                 if attempt < max_retries - 1:
                     time.sleep(0.5 * (attempt + 1))  # Increasing delay
                 else:
-                    print(f"Warning: Could not remove {path} after {max_retries} attempts")
+                    print(f"Can't remove {path} after {max_retries} tries")
 
     def create_test_repo(self) -> str:
         """Create a test repository for testing."""
         self.temp_repo_path = tempfile.mkdtemp(prefix="test_repo_")
         repo = Repo.init(self.temp_repo_path)
-        
+
         # Create a test file
         test_file = Path(self.temp_repo_path) / "test.py"
         test_file.write_text("print('Hello, World!')")
-        
+
         # Make initial commit with a specific author
         default_author = Actor("DefaultAuthor", "default@test.com")
         repo.index.add(["test.py"])
         repo.index.commit("Initial commit", author=default_author)
-        
+
         return self.temp_repo_path
 
     def create_comprehensive_test_repo(self) -> str:
         """Create a comprehensive test repository with various files."""
         self.temp_repo_path = tempfile.mkdtemp(prefix="test_repo_")
         repo = Repo.init(self.temp_repo_path)
-        
+
         # Create Python files
         (Path(self.temp_repo_path) / "main.py").write_text("""
 def main():
@@ -74,7 +73,7 @@ def main():
 if __name__ == "__main__":
     main()
 """)
-        
+
         # Create a README
         (Path(self.temp_repo_path) / "README.md").write_text("""
 # Test Repository
@@ -101,15 +100,16 @@ See the examples/ directory for usage examples.
 2. Install dependencies
 3. Run the examples
 """)
-        
+
         # Create requirements.txt
-        (Path(self.temp_repo_path) / "requirements.txt").write_text("requests\nnumpy\npandas")
-        
+        (Path(self.temp_repo_path) / "requirements.txt"). \
+            write_text("requests\nnumpy\npandas")
+
         # Create examples directory
         examples_dir = Path(self.temp_repo_path) / "examples"
         examples_dir.mkdir()
         (examples_dir / "demo.py").write_text("print('Demo example')")
-        
+
         # Create tests directory
         tests_dir = Path(self.temp_repo_path) / "tests"
         tests_dir.mkdir()
@@ -125,37 +125,41 @@ class TestMain(unittest.TestCase):
         except Exception as e:
             self.fail(f"main() raised {type(e).__name__} unexpectedly!")
 """)
-        
+
         # Make initial commit
         default_author = Actor("DefaultAuthor", "default@test.com")
-        repo.index.add(["main.py", "README.md", "requirements.txt", "examples/demo.py", "tests/test_main.py"])
+        repo.index.add(["main.py",
+                        "README.md",
+                        "requirements.txt",
+                        "examples/demo.py",
+                        "tests/test_main.py"])
         repo.index.commit("Initial commit", author=default_author)
-        
+
         return self.temp_repo_path
 
     def test_analyze_commits(self):
         """Test commit analysis."""
         repo_path = self.create_test_repo()
-        
+
         # Add more commits with different authors
         repo = Repo(repo_path)
-        
+
         # Create commits with different authors
         test_file = Path(repo_path) / "test.py"
         test_file.write_text("print('Updated!')")
         repo.index.add(["test.py"])
         author1 = Actor("Author1", "author1@test.com")
         repo.index.commit("Update test file", author=author1)
-        
+
         test_file.write_text("print('Updated again!')")
         repo.index.add(["test.py"])
         author2 = Actor("Author2", "author2@test.com")
         repo.index.commit("Another update", author=author2)
-        
+
         commit_stats = self.git_client.analyze_commits(repo_path)
-        
+
         self.assertIsInstance(commit_stats, CommitStats)
-        self.assertGreaterEqual(commit_stats.total_commits, 3)  # Initial + 2 new commits
+        self.assertGreaterEqual(commit_stats.total_commits, 3)
         self.assertGreaterEqual(len(commit_stats.contributors), 2)
         self.assertGreaterEqual(commit_stats.bus_factor, 0.0)
         self.assertLessEqual(commit_stats.bus_factor, 1.0)
@@ -166,7 +170,7 @@ class TestMain(unittest.TestCase):
         try:
             Repo.init(empty_repo_path)
             commit_stats = self.git_client.analyze_commits(empty_repo_path)
-            
+
             self.assertEqual(commit_stats.total_commits, 0)
             self.assertEqual(commit_stats.bus_factor, 0.0)
         finally:
@@ -175,65 +179,65 @@ class TestMain(unittest.TestCase):
     def test_analyze_commits_single_author(self):
         """Test commit analysis with single author (low bus factor)."""
         repo_path = self.create_test_repo()
-        
+
         # Add more commits with same author as the initial commit
         repo = Repo(repo_path)
-        
+
         test_file = Path(repo_path) / "test.py"
-        same_author = Actor("DefaultAuthor", "default@test.com")  # Same as initial commit
+        same_author = Actor("DefaultAuthor", "default@test.com")
         for i in range(5):
             test_file.write_text(f"print('Update {i}')")
             repo.index.add(["test.py"])
             repo.index.commit(f"Update {i}", author=same_author)
-        
+
         commit_stats = self.git_client.analyze_commits(repo_path)
-        
+
         self.assertIsInstance(commit_stats, CommitStats)
-        self.assertGreaterEqual(commit_stats.total_commits, 6)  # Initial + 5 new commits
+        self.assertGreaterEqual(commit_stats.total_commits, 6)
         self.assertEqual(len(commit_stats.contributors), 1)
-        self.assertLess(commit_stats.bus_factor, 0.5)  # Should be low for single author
+        self.assertLess(commit_stats.bus_factor, 0.5)
 
     def test_analyze_commits_multiple_authors(self):
         """Test commit analysis with multiple authors (high bus factor)."""
         repo_path = self.create_test_repo()
-        
+
         # Add commits with different authors
         repo = Repo(repo_path)
-        
+
         test_file = Path(repo_path) / "test.py"
         authors = [
             Actor("Author1", "author1@test.com"),
             Actor("Author2", "author2@test.com"),
             Actor("Author3", "author3@test.com")
         ]
-        
+
         for i, author in enumerate(authors):
             test_file.write_text(f"print('Update by {author.name}')")
             repo.index.add(["test.py"])
             repo.index.commit(f"Update by {author.name}", author=author)
-        
+
         commit_stats = self.git_client.analyze_commits(repo_path)
-        
+
         self.assertIsInstance(commit_stats, CommitStats)
-        self.assertGreaterEqual(commit_stats.total_commits, 4)  # Initial + 3 new commits
+        self.assertGreaterEqual(commit_stats.total_commits, 4)
         self.assertGreaterEqual(len(commit_stats.contributors), 3)
-        self.assertGreater(commit_stats.bus_factor, 0.5)  # Should be higher for multiple authors
+        self.assertGreater(commit_stats.bus_factor, 0.5)
 
     def test_cleanup(self):
         """Test cleanup functionality."""
         # Create some temp directories
         temp_dir1 = tempfile.mkdtemp(prefix="test_cleanup_1_")
         temp_dir2 = tempfile.mkdtemp(prefix="test_cleanup_2_")
-        
+
         self.git_client.temp_dirs = [temp_dir1, temp_dir2]
-        
+
         # Verify directories exist
         self.assertTrue(os.path.exists(temp_dir1))
         self.assertTrue(os.path.exists(temp_dir2))
-        
+
         # Clean up
         self.git_client.cleanup()
-        
+
         # Verify directories are removed
         self.assertFalse(os.path.exists(temp_dir1))
         self.assertFalse(os.path.exists(temp_dir2))
@@ -241,13 +245,15 @@ class TestMain(unittest.TestCase):
 
     def test_clone_repository_invalid_url(self):
         """Test cloning with invalid URL."""
-        result = self.git_client.clone_repository("https://github.com/nonexistent/repo")
+        result = \
+            self.git_client. \
+            clone_repository("https://github.com/nonexistent/repo")
         self.assertIsNone(result)
 
     def test_analyze_commits_invalid_path(self):
         """Test commit analysis with invalid path."""
         commit_stats = self.git_client.analyze_commits("/nonexistent/path")
-        
+
         self.assertIsInstance(commit_stats, CommitStats)
         self.assertEqual(commit_stats.total_commits, 0)
         self.assertEqual(commit_stats.bus_factor, 0.0)
@@ -256,11 +262,11 @@ class TestMain(unittest.TestCase):
     def test_analyze_code_quality(self):
         """Test code quality analysis."""
         repo_path = self.create_comprehensive_test_repo()
-        
+
         quality_stats = self.git_client.analyze_code_quality(repo_path)
-        
+
         self.assertIsInstance(quality_stats, CodeQualityStats)
-        self.assertTrue(quality_stats.has_tests)  # We created a tests directory
+        self.assertTrue(quality_stats.has_tests)
         self.assertIsInstance(quality_stats.lint_errors, int)
         self.assertGreaterEqual(quality_stats.code_quality_score, 0.0)
         self.assertLessEqual(quality_stats.code_quality_score, 1.0)
@@ -271,9 +277,10 @@ class TestMain(unittest.TestCase):
         try:
             Repo.init(no_python_path)
             (Path(no_python_path) / "README.txt").write_text("No Python here")
-            
-            quality_stats = self.git_client.analyze_code_quality(no_python_path)
-            
+
+            quality_stats = \
+                self.git_client.analyze_code_quality(no_python_path)
+
             self.assertFalse(quality_stats.has_tests)
             self.assertEqual(quality_stats.lint_errors, 0)
             self.assertEqual(quality_stats.code_quality_score, 1.0)
@@ -282,8 +289,9 @@ class TestMain(unittest.TestCase):
 
     def test_analyze_code_quality_invalid_path(self):
         """Test code quality analysis with invalid path."""
-        quality_stats = self.git_client.analyze_code_quality("/nonexistent/path")
-        
+        quality_stats = \
+            self.git_client.analyze_code_quality("/nonexistent/path")
+
         self.assertIsInstance(quality_stats, CodeQualityStats)
         self.assertFalse(quality_stats.has_tests)
         self.assertEqual(quality_stats.lint_errors, 0)
@@ -292,12 +300,12 @@ class TestMain(unittest.TestCase):
     def test_analyze_ramp_up_time(self):
         """Test ramp-up time analysis."""
         repo_path = self.create_comprehensive_test_repo()
-        
+
         ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-        
+
         self.assertIsInstance(ramp_up_stats, RampUpStats)
-        self.assertTrue(ramp_up_stats.has_examples)  # We created examples directory
-        self.assertTrue(ramp_up_stats.has_dependencies)  # We created requirements.txt
+        self.assertTrue(ramp_up_stats.has_examples)
+        self.assertTrue(ramp_up_stats.has_dependencies)
         self.assertGreaterEqual(ramp_up_stats.readme_quality, 0.0)
         self.assertLessEqual(ramp_up_stats.readme_quality, 1.0)
         self.assertGreaterEqual(ramp_up_stats.ramp_up_score, 0.0)
@@ -306,9 +314,9 @@ class TestMain(unittest.TestCase):
     def test_analyze_ramp_up_time_minimal_repo(self):
         """Test ramp-up time analysis with minimal repository."""
         repo_path = self.create_test_repo()
-        
+
         ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-        
+
         self.assertIsInstance(ramp_up_stats, RampUpStats)
         self.assertFalse(ramp_up_stats.has_examples)  # No examples directory
         self.assertFalse(ramp_up_stats.has_dependencies)  # No requirements.txt
@@ -317,8 +325,9 @@ class TestMain(unittest.TestCase):
 
     def test_analyze_ramp_up_time_invalid_path(self):
         """Test ramp-up time analysis with invalid path."""
-        ramp_up_stats = self.git_client.analyze_ramp_up_time("/nonexistent/path")
-        
+        ramp_up_stats = self. \
+            git_client.analyze_ramp_up_time("/nonexistent/path")
+
         self.assertIsInstance(ramp_up_stats, RampUpStats)
         self.assertFalse(ramp_up_stats.has_examples)
         self.assertFalse(ramp_up_stats.has_dependencies)
@@ -328,23 +337,25 @@ class TestMain(unittest.TestCase):
     def test_get_repository_size(self):
         """Test repository size calculation."""
         repo_path = self.create_comprehensive_test_repo()
-        
-        size_scores = self.git_client.get_repository_size(repo_path)
-        
+
+        size_scores = \
+            self.git_client.get_repository_size(repo_path)
+
         self.assertIsInstance(size_scores, dict)
         self.assertIn('raspberry_pi', size_scores)
         self.assertIn('jetson_nano', size_scores)
         self.assertIn('desktop_pc', size_scores)
         self.assertIn('aws_server', size_scores)
-        
+
         # All scores should be 0.0 or 1.0
         for score in size_scores.values():
             self.assertIn(score, [0.0, 1.0])
 
     def test_get_repository_size_invalid_path(self):
         """Test repository size calculation with invalid path."""
-        size_scores = self.git_client.get_repository_size("/nonexistent/path")
-        
+        size_scores = \
+            self.git_client.get_repository_size("/nonexistent/path")
+
         self.assertIsInstance(size_scores, dict)
         self.assertEqual(size_scores['raspberry_pi'], 0.0)
         self.assertEqual(size_scores['jetson_nano'], 0.0)
