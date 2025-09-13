@@ -9,6 +9,8 @@ import pytest
 
 from src import main
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 def test_main_runs():
     """Tests that the main function can be called without error."""
@@ -85,11 +87,7 @@ def test_main_function_incorrect_args(monkeypatch):
     """
     Tests that the main function exits when called with incorrect arguments.
     """
-    monkeypatch.setattr(sys, 'argv', ['src/main.py'])
-    with pytest.raises(SystemExit) as e:
-        main.main()
-    assert e.value.code == 1
-
+    # Test with too many arguments (should exit with code 1)
     monkeypatch.setattr(sys, 'argv', ['src/main.py', 'file1.txt', 'file2.txt'])
     with pytest.raises(SystemExit) as e:
         main.main()

@@ -1,6 +1,7 @@
 import os
 import shutil
 import stat
+import sys
 import tempfile
 import time
 import unittest
@@ -10,6 +11,11 @@ from git import Actor, Repo
 
 from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
                                RampUpStats)
+
+sys.path.insert(0,
+                os.path.dirname(
+                    os.path.dirname(
+                        os.path.dirname(os.path.abspath(__file__)))))
 
 
 class TestGitClient(unittest.TestCase):
