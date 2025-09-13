@@ -68,5 +68,5 @@ class HuggingFaceClient:
         return hf_hub_download(
             repo_id=repo_id,
             filename=filename,
-            local_dir=local_dir
+            local_dir=local_dir,
             )
