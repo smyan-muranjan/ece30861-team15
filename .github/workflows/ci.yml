@@ -42,4 +42,4 @@ jobs:
 
       # Step 7: Run tests with coverage
       - name: Run pytest
-        run: pytest --cov=src --cov-report=term-missing
+        run: python3 -m pytest --cov=src --cov-report=term-missing
