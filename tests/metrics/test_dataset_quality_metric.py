@@ -26,7 +26,10 @@ class TestDatasetQualityMetric(unittest.TestCase):
 
     def test_calculate_invalid_type(self):
         with self.assertRaises(AssertionError):
-            self.metric.calculate({"normalized_likes": 0.5, "normalized_downloads": 0.5})
+            self.metric.calculate(
+                {"normalized_likes": 0.5, "normalized_downloads": 0.5}
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
