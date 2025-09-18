@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       # Step 3: Install dependencies
       - name: Install dependencies
@@ -30,19 +30,15 @@ jobs:
       # Step 4: Run Linter
       - name: Run flake8
         run: flake8 src tests
-        continue-on-error: true
 
       # Step 5: Run isort (check mode)
       - name: Run isort
         run: isort --check-only src tests
-        continue-on-error: true
 
       # Step 6: Run mypy
       - name: Run mypy
         run: mypy src --check-untyped-defs
-        continue-on-error: true
 
       # Step 7: Run tests with coverage
       - name: Run pytest
         run: python3 -m pytest --cov=src --cov-report=term-missing
-        continue-on-error: true
