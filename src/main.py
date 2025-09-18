@@ -5,7 +5,7 @@ import sys
 import time
 from typing import Any, Dict, List
 
-from src.metrics.local_metrics import LocalMetricsCalculator
+# from src.metrics.local_metrics import LocalMetricsCalculator
 
 # --- Logging setup ---
 LOG_LEVEL_STR = os.environ.get("LOG_LEVEL", "0")
