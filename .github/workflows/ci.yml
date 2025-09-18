@@ -26,7 +26,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov flake8 isort mypy
 
       # Step 4: Run Linter
       - name: Run flake8
@@ -41,5 +40,5 @@ jobs:
         run: mypy src
 
       # Step 7: Run tests with coverage
-      - name: Run pytest
+      - name: Run pytest --check-untyped-defs 
         run: python3 -m pytest --cov=src --cov-report=term-missing
