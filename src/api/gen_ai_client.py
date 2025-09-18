@@ -1,10 +1,13 @@
 import requests
 import os
 
+
 class GenAIClient:
     def __init__(self, api_key: str = "sk-232cb6a155564c27839633098a0904e1"):
         self.url = "https://genai.rcac.purdue.edu/api/chat/completions"
-        api_key = os.environ.get("GENAI_API_KEY")
+        env_api_key = os.environ.get("GENAI_API_KEY")
+        if env_api_key is not None:
+            api_key = env_api_key
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"

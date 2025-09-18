@@ -3,13 +3,16 @@ import pytest
 from unittest.mock import patch, MagicMock
 from src.api.gen_ai_client import GenAIClient
 
+
 class TestGenAIClient:
     @patch.dict(os.environ, {"GENAI_API_KEY": "test_key"})
     def test_init_sets_headers(self):
         client = GenAIClient()
         assert client.headers["Authorization"] == "Bearer test_key"
         assert client.headers["Content-Type"] == "application/json"
-        assert client.url == "https://genai.rcac.purdue.edu/api/chat/completions"
+        assert client.url == (
+            "https://genai.rcac.purdue.edu/api/chat/completions"
+        )
 
     @patch.dict(os.environ, {"GENAI_API_KEY": "test_key"})
     @patch("src.api.gen_ai_client.requests.post")
