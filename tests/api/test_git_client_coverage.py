@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from git import Repo
 
-from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
+from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
                                RampUpStats)
 
 sys.path.insert(0,

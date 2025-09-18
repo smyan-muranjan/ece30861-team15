@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
-from src.api.GitClient import GitClient
+from src.api.git_client import GitClient
 
 
 class LocalMetricsCalculator:

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from git import Actor, Repo
 
-from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
+from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
                                RampUpStats)
 
 sys.path.insert(0,
