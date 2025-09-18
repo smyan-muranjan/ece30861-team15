@@ -3,7 +3,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.api.HuggingFaceClient import HuggingFaceClient
+from src.api.hugging_face_client import HuggingFaceClient
 from src.models.dataset_stats import DatasetStats
 
 sys.path.insert(0,

@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 from git import Repo
 
-from src.api.GitClient import (CodeQualityStats, CommitStats, GitClient,
-                               RampUpStats)
+from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
+                                RampUpStats)
 
 sys.path.insert(0,
                 os.path.dirname(
@@ -43,7 +43,7 @@ class TestGitClientCoverage(unittest.TestCase):
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                shutil.rmtree(path, onerror=handle_remove_readonly)
+                shutil.rmtree(path, onexc=handle_remove_readonly)
                 break
             except (PermissionError, OSError):
                 if attempt < max_retries - 1:

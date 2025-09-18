@@ -19,14 +19,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov flake8 isort mypy
 
       # Step 4: Run Linter
       - name: Run flake8
@@ -38,7 +37,7 @@ jobs:
 
       # Step 6: Run mypy
       - name: Run mypy
-        run: mypy src
+        run: mypy src --check-untyped-defs
 
       # Step 7: Run tests with coverage
       - name: Run pytest

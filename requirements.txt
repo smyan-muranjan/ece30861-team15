@@ -8,6 +8,7 @@ isort
 
 # Type Checking
 mypy
+types-requests
 
 # Implementation
 huggingface_hub

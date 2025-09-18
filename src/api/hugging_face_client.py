@@ -1,5 +1,4 @@
 import math
-from typing import Dict
 
 from huggingface_hub import HfApi, hf_hub_download
 
@@ -24,15 +23,6 @@ class HuggingFaceClient:
             return 0.0
         return min(math.log1p(value) / math.log1p(max_value), 1.0)
 
-    def get_model_info(self, repo_id: str) -> Dict:
-        """
-        Get metadata for a model repo (downloads, likes, tags, etc.).
-
-        :param repo_id: "namespace/repo_name"
-        :return: dict containing model info
-        """
-        return self.api.model_info(repo_id)
-
     def get_dataset_info(self, repo_id: str) -> DatasetStats:
         """
         Get number of likes and downloads for a dataset repo.
@@ -42,11 +32,11 @@ class HuggingFaceClient:
         """
         info = self.api.dataset_info(repo_id)
         normalized_likes = self.normalize_log(
-            info.likes,
+            info.likes if info.likes is not None else 0,
             MAX_DATASET_LIKES
             )
         normalized_downloads = self.normalize_log(
-            info.downloads,
+            info.downloads if info.downloads is not None else 0,
             MAX_DATASET_DOWNLOADS
             )
         return DatasetStats(
