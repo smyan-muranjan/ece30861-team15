@@ -101,16 +101,24 @@ def process_urls(urls: List[str]) -> None:
     """
     logging.info(f"Processing {len(urls)} URLs.")
 
-    # Initialize the local metrics calculator
-    github_token = os.environ.get("GITHUB_TOKEN")
-    calculator = LocalMetricsCalculator(github_token)
-
+    # placeholder metrics for now
     try:
         for url in urls:
             start_time = time.time()
 
-            # Analyze the repository using local metrics
-            local_metrics = calculator.analyze_repository(url)
+            local_metrics = {
+                "size": {
+                    "raspberry_pi": 0.0, "jetson_nano": 0.0,
+                    "desktop_pc": 0.0, "aws_server": 0.0
+                },
+                "license": 0.0,
+                "ramp_up_time": 0.0,
+                "bus_factor": 0.0,
+                "available_dataset_and_code_score": 0.0,
+                "dataset_quality": 0.0,
+                "code_quality": 0.0,
+                "performance_claims": 0.0
+            }
 
             # Calculate net score
             net_score = calculate_net_score(local_metrics)
@@ -153,8 +161,8 @@ def process_urls(urls: List[str]) -> None:
             print(json.dumps(scorecard))
 
     finally:
-        # Clean up any temporary directories
-        calculator.git_client.cleanup()
+        # clean temp directories
+        pass
 
 
 def main():
