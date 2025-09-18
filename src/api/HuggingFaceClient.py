@@ -24,15 +24,6 @@ class HuggingFaceClient:
             return 0.0
         return min(math.log1p(value) / math.log1p(max_value), 1.0)
 
-    def get_model_info(self, repo_id: str) -> Dict:
-        """
-        Get metadata for a model repo (downloads, likes, tags, etc.).
-
-        :param repo_id: "namespace/repo_name"
-        :return: dict containing model info
-        """
-        return self.api.model_info(repo_id)
-
     def get_dataset_info(self, repo_id: str) -> DatasetStats:
         """
         Get number of likes and downloads for a dataset repo.
