@@ -37,8 +37,8 @@ jobs:
 
       # Step 6: Run mypy
       - name: Run mypy
-        run: mypy src
+        run: mypy src --check-untyped-defs 
 
       # Step 7: Run tests with coverage
-      - name: Run pytest --check-untyped-defs 
+      - name: Run pytest 
         run: python3 -m pytest --cov=src --cov-report=term-missing
