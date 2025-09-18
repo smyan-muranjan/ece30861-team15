@@ -32,11 +32,11 @@ class HuggingFaceClient:
         """
         info = self.api.dataset_info(repo_id)
         normalized_likes = self.normalize_log(
-            info.likes,
+            info.likes if info.likes is not None else 0,
             MAX_DATASET_LIKES
             )
         normalized_downloads = self.normalize_log(
-            info.downloads,
+            info.downloads if info.downloads is not None else 0,
             MAX_DATASET_DOWNLOADS
             )
         return DatasetStats(
