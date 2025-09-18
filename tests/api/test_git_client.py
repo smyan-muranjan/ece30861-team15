@@ -42,14 +42,14 @@ class TestGitClient(unittest.TestCase):
 
         max_retries = 3
         for attempt in range(max_retries):
-            try:
-                shutil.rmtree(path, onerror=handle_remove_readonly)
-                break
-            except (PermissionError, OSError):
-                if attempt < max_retries - 1:
-                    time.sleep(0.5 * (attempt + 1))  # Increasing delay
-                else:
-                    print(f"Can't remove {path} after {max_retries} tries")
+                try:
+                    shutil.rmtree(path, onexc=handle_remove_readonly)
+                    break
+                except (PermissionError, OSError):
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5 * (attempt + 1))  # Increasing delay
+                    else:
+                        print(f"Can't remove {path} after {max_retries} tries")
 
     def create_test_repo(self) -> str:
         """Create a test repository for testing."""
