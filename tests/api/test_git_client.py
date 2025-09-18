@@ -10,7 +10,7 @@ from pathlib import Path
 from git import Actor, Repo
 
 from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
-                               RampUpStats)
+                                RampUpStats)
 
 sys.path.insert(0,
                 os.path.dirname(

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from git import Repo
 
 from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
-                               RampUpStats)
+                                RampUpStats)
 
 sys.path.insert(0,
                 os.path.dirname(
