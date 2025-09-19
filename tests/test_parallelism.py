@@ -1,0 +1,64 @@
+import asyncio
+import time
+from concurrent.futures import ProcessPoolExecutor
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from src.main import analyze_url
+
+
+@pytest.mark.asyncio
+async def test_parallelism_performance():
+    """
+    Tests that processing URLs concurrently is substantially
+    faster than a sequential approach, validating the project's
+    performance goals. [cite: 190]
+    """
+    urls = [f"https://github.com/test/repo{i}" for i in range(4)]
+
+    # Mock GitClient to simulate work without actual network/disk operations
+    with patch('src.api.git_client.GitClient') as MockGitClient:
+        mock_git_instance = MockGitClient.return_value
+
+        # Simulate a 100ms I/O-bound clone operation
+        def mock_clone(url):
+            time.sleep(0.1)
+            return f"/tmp/{url.split('/')[-1]}"
+        mock_git_instance.clone_repository.side_effect = mock_clone
+
+        # Simulate CPU-bound analysis tasks
+        mock_git_instance.analyze_commits.return_value = MagicMock(
+            total_commits=10,
+            contributors={'a': 5, 'b': 5})
+        mock_git_instance.analyze_code_quality.return_value = MagicMock(
+            lint_errors=5,
+            has_tests=True)
+        mock_git_instance.analyze_ramp_up_time.return_value = MagicMock(
+            readme_quality=0.8,
+            has_examples=True,
+            has_dependencies=True)
+        mock_git_instance.cleanup.return_value = None
+
+        # --- Test Sequential Execution ---
+        start_time_seq = time.time()
+        with ProcessPoolExecutor(max_workers=4) as pool:
+            # Awaiting each task individually simulates sequential execution
+            for url in urls:
+                await analyze_url(url, pool)
+        sequential_time = time.time() - start_time_seq
+
+        # --- Test Concurrent Execution ---
+        start_time_para = time.time()
+        with ProcessPoolExecutor(max_workers=4) as pool:
+            tasks = [analyze_url(url, pool) for url in urls]
+            await asyncio.gather(*tasks)
+        parallel_time = time.time() - start_time_para
+
+        print(f"\nSequential-like execution time: {sequential_time:.4f}s")
+        print(f"Concurrent execution time:      {parallel_time:.4f}s")
+
+        # Assert that the parallel version is substantially faster
+        assert parallel_time < sequential_time
+        assert parallel_time < sequential_time * 0.5, \
+            "Concurrent execution should be at least twice as fast."
