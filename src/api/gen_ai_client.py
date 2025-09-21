@@ -40,4 +40,8 @@ class GenAIClient:
         with open("src/api/performance_claims_ai_prompt.txt", "r") as f:
             prompt = f.read()
         prompt += readme_text
-        return json.loads(await self.chat(prompt))
+        response = await self.chat(prompt)
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse GenAI response as JSON: {response}") from e
