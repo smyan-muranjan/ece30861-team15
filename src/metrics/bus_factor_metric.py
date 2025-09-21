@@ -1,13 +1,13 @@
-from typing import Any
+from typing import Any, Optional
 
 from src.api.git_client import GitClient
 from src.metrics.metric import Metric
 
 
 class BusFactorMetric(Metric):
-    def __init__(self, git_client: GitClient = None):
+    def __init__(self, git_client: Optional[GitClient] = None):
         self.git_client = git_client or GitClient()
-
+    
     async def calculate(self, metric_input: Any) -> float:
         assert isinstance(metric_input, str)
 
