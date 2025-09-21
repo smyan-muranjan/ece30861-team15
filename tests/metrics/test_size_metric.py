@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.metric_inputs.size_input import SizeInput
 from src.metrics.size_metric import SizeMetric
 
 
@@ -20,7 +21,7 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 1.0,
@@ -41,7 +42,7 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 0.0,
@@ -62,7 +63,7 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 0.0,
@@ -83,7 +84,7 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 0.0,
@@ -104,7 +105,7 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 0.0,
@@ -125,7 +126,8 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 0.0,
@@ -154,7 +156,8 @@ class TestSizeMetric:
             mock_git_client_class.return_value = mock_git_client
 
             metric = SizeMetric()
-            result = await metric.calculate("/test/repo")
+            result = await metric.calculate(
+                SizeInput(repo_url="/test/repo"))
 
             expected = {
                 'raspberry_pi': 1.0,
@@ -170,7 +173,8 @@ class TestSizeMetric:
         mock_git_client.get_repository_size.return_value = {}
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            SizeInput(repo_url="/test/repo"))
 
         assert result == {}
 
@@ -183,7 +187,8 @@ class TestSizeMetric:
         }
 
         metric = SizeMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            SizeInput(repo_url="/test/repo"))
 
         expected = {
             'raspberry_pi': 1.0,

@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 from src.api.git_client import GitClient
+from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metrics.metric import Metric
 
 
@@ -9,9 +10,9 @@ class BusFactorMetric(Metric):
         self.git_client = git_client or GitClient()
 
     async def calculate(self, metric_input: Any) -> float:
-        assert isinstance(metric_input, str)
+        assert isinstance(metric_input, BusFactorInput)
 
-        commit_stats = self.git_client.analyze_commits(metric_input)
+        commit_stats = self.git_client.analyze_commits(metric_input.repo_url)
         if not commit_stats or commit_stats.total_commits == 0:
             return 0.0
 

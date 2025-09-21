@@ -5,6 +5,9 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Any, Dict, Optional
 
 from src.api.git_client import GitClient
+from src.metric_inputs.bus_factor_input import BusFactorInput
+from src.metric_inputs.code_quality_input import CodeQualityInput
+from src.metric_inputs.size_input import SizeInput
 from src.metrics.bus_factor_metric import BusFactorMetric
 from src.metrics.code_quality_metric import CodeQualityMetric
 from src.metrics.size_metric import SizeMetric
@@ -64,13 +67,16 @@ class LocalMetricsCalculator:
 
         try:
             bus_factor_task = self._run_cpu_bound(
-                self.bus_factor_metric.calculate, repo_path)
+                self.bus_factor_metric.calculate,
+                BusFactorInput(repo_url=repo_path))
             code_quality_task = self._run_cpu_bound(
-                self.code_quality_metric.calculate, repo_path)
+                self.code_quality_metric.calculate,
+                CodeQualityInput(repo_url=repo_path))
             # ramp_up_task = self._run_cpu_bound(
             #     self.ramp_up_time_metric.calculate, repo_path)
             size_task = self._run_cpu_bound(
-                self.size_metric.calculate, repo_path)
+                self.size_metric.calculate,
+                SizeInput(repo_url=repo_path))
 
             (bus_factor_score, bus_lat), \
                 (code_quality_score, qual_lat), \

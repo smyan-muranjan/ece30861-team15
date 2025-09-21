@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.api.git_client import CodeQualityStats
+from src.metric_inputs.code_quality_input import CodeQualityInput
 from src.metrics.code_quality_metric import CodeQualityMetric
 
 
@@ -21,7 +22,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # Perfect score: 0.6 * 1.0 + 0.4 * 1.0 = 1.0
         expected = 1.0
@@ -38,7 +40,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # No tests, no errors: 0.6 * 1.0 + 0.4 * 0.0 = 0.6
         expected = 0.6
@@ -55,7 +58,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # With lint errors and tests: 0.6 * 0.5 + 0.4 * 1.0 = 0.3 + 0.4 = 0.7
         expected = 0.7
@@ -72,7 +76,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # Max lint errors with tests: 0.6 * 0.0 + 0.4 * 1.0 = 0.4
         expected = 0.4
@@ -89,7 +94,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # No tests, some errors: 0.6 * 0.75 + 0.4 * 0.0 = 0.45
         expected = 0.45
@@ -106,7 +112,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         # Worst case: 0.6 * 0.0 + 0.4 * 0.0 = 0.0
         expected = 0.0
@@ -131,7 +138,8 @@ class TestCodeQualityMetric:
             mock_git_client_class.return_value = mock_git_client
 
             metric = CodeQualityMetric()
-            result = await metric.calculate("/test/repo")
+            result = await metric.calculate(
+                CodeQualityInput(repo_url="/test/repo"))
 
             # With tests and some errors: 0.6 * 0.6
             # + 0.4 * 1.0 = 0.36 + 0.4 = 0.76
@@ -149,7 +157,8 @@ class TestCodeQualityMetric:
             )
 
         metric = CodeQualityMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            CodeQualityInput(repo_url="/test/repo"))
 
         expected = CodeQualityMetric.LINT_WEIGHT * 1.0 + \
             CodeQualityMetric.TESTS_WEIGHT * 1.0

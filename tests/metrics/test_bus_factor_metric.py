@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.api.git_client import CommitStats
+from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metrics.bus_factor_metric import BusFactorMetric
 
 
@@ -22,7 +23,8 @@ class TestBusFactorMetric:
         )
 
         metric = BusFactorMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            BusFactorInput(repo_url="/test/repo"))
 
         # Perfect distribution: each author has 20/100 = 0.2 proportion
         # concentration = 5 * (0.2)^2 = 5 * 0.04 = 0.2
@@ -40,7 +42,8 @@ class TestBusFactorMetric:
         )
 
         metric = BusFactorMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            BusFactorInput(repo_url="/test/repo"))
 
         # Single author: concentration = (100/100)^2 = 1.0
         # bus_factor = 1 - 1.0 = 0.0
@@ -56,7 +59,8 @@ class TestBusFactorMetric:
         )
 
         metric = BusFactorMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            BusFactorInput(repo_url="/test/repo"))
 
         # concentration = (0.5)^2 + (0.3)^2 + (0.2)^2
         # = 0.25 + 0.09 + 0.04 = 0.38
@@ -74,7 +78,8 @@ class TestBusFactorMetric:
         )
 
         metric = BusFactorMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            BusFactorInput(repo_url="/test/repo"))
 
         assert result == 0.0
 
@@ -84,7 +89,8 @@ class TestBusFactorMetric:
         mock_git_client.analyze_commits.return_value = None
 
         metric = BusFactorMetric(mock_git_client)
-        result = await metric.calculate("/test/repo")
+        result = await metric.calculate(
+            BusFactorInput(repo_url="/test/repo"))
 
         assert result == 0.0
 
@@ -106,7 +112,8 @@ class TestBusFactorMetric:
             mock_git_client_class.return_value = mock_git_client
 
             metric = BusFactorMetric()
-            result = await metric.calculate("/test/repo")
+            result = await metric.calculate(
+                BusFactorInput(repo_url="/test/repo"))
 
             # concentration = (0.5)^2 + (0.3)^2 + (0.2)^2 =
             # 0.25 + 0.09 + 0.04 = 0.38
