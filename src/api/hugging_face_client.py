@@ -3,7 +3,7 @@ import math
 from huggingface_hub import HfApi, hf_hub_download
 
 from src.constants import MAX_DATASET_DOWNLOADS, MAX_DATASET_LIKES
-from src.models.dataset_stats import DatasetStats
+from src.metric_inputs.dataset_stats import DatasetStats
 
 
 class HuggingFaceClient:
