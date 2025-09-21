@@ -44,4 +44,6 @@ class GenAIClient:
         try:
             return json.loads(response)
         except json.JSONDecodeError as e:
-            raise Exception(f"Failed to parse GenAI response as JSON: {response}") from e
+            raise Exception(
+                f"Failed to parse GenAI response as JSON: {response}"
+            ) from e
