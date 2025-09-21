@@ -1,6 +1,7 @@
+import json
 import os
 
-import requests
+import aiohttp
 
 
 class GenAIClient:
@@ -14,7 +15,7 @@ class GenAIClient:
             "Content-Type": "application/json"
         }
 
-    def chat(self, message: str, model: str = "llama3.1:latest") -> str:
+    async def chat(self, message: str, model: str = "llama3.1:latest") -> str:
         body = {
             "model": model,
             "messages": [
@@ -24,8 +25,25 @@ class GenAIClient:
                 }
             ]
         }
-        response = requests.post(self.url, headers=self.headers, json=body)
-        if response.status_code == 200:
-            return response.json()['choices'][0]['message']['content']
-        else:
-            raise Exception(f"Error: {response.status_code}, {response.text}")
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                self.url, headers=self.headers, json=body
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data['choices'][0]['message']['content']
+                else:
+                    error = await response.text()
+                    raise Exception(f"Error: {response.status}, {error}")
+
+    async def get_performance_claims(self, readme_text: str) -> dict:
+        with open("src/api/performance_claims_ai_prompt.txt", "r") as f:
+            prompt = f.read()
+        prompt += readme_text
+        response = await self.chat(prompt)
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError as e:
+            raise Exception(
+                f"Failed to parse GenAI response as JSON: {response}"
+            ) from e

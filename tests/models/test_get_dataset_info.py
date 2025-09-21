@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from src.api.hugging_face_client import HuggingFaceClient
-from src.models.dataset_stats import DatasetStats
+from src.metric_inputs.dataset_stats import DatasetStats
 
 
 class TestGetDatasetInfo(unittest.TestCase):
