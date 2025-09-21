@@ -8,8 +8,7 @@ from pathlib import Path
 
 from git import Actor, Repo
 
-from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
-                                RampUpStats)
+from src.api.git_client import CodeQualityStats, CommitStats, GitClient
 
 
 class TestGitClient(unittest.TestCase):
@@ -297,43 +296,6 @@ class TestMain(unittest.TestCase):
         self.assertFalse(quality_stats.has_tests)
         self.assertEqual(quality_stats.lint_errors, 0)
         self.assertEqual(quality_stats.code_quality_score, 0.0)
-
-    def test_analyze_ramp_up_time(self):
-        """Test ramp-up time analysis."""
-        repo_path = self.create_comprehensive_test_repo()
-
-        ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-
-        self.assertIsInstance(ramp_up_stats, RampUpStats)
-        self.assertTrue(ramp_up_stats.has_examples)
-        self.assertTrue(ramp_up_stats.has_dependencies)
-        self.assertGreaterEqual(ramp_up_stats.readme_quality, 0.0)
-        self.assertLessEqual(ramp_up_stats.readme_quality, 1.0)
-        self.assertGreaterEqual(ramp_up_stats.ramp_up_score, 0.0)
-        self.assertLessEqual(ramp_up_stats.ramp_up_score, 1.0)
-
-    def test_analyze_ramp_up_time_minimal_repo(self):
-        """Test ramp-up time analysis with minimal repository."""
-        repo_path = self.create_test_repo()
-
-        ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-
-        self.assertIsInstance(ramp_up_stats, RampUpStats)
-        self.assertFalse(ramp_up_stats.has_examples)  # No examples directory
-        self.assertFalse(ramp_up_stats.has_dependencies)  # No requirements.txt
-        self.assertEqual(ramp_up_stats.readme_quality, 0.0)  # No README
-        self.assertEqual(ramp_up_stats.ramp_up_score, 0.0)
-
-    def test_analyze_ramp_up_time_invalid_path(self):
-        """Test ramp-up time analysis with invalid path."""
-        ramp_up_stats = self. \
-            git_client.analyze_ramp_up_time("/nonexistent/path")
-
-        self.assertIsInstance(ramp_up_stats, RampUpStats)
-        self.assertFalse(ramp_up_stats.has_examples)
-        self.assertFalse(ramp_up_stats.has_dependencies)
-        self.assertEqual(ramp_up_stats.readme_quality, 0.0)
-        self.assertEqual(ramp_up_stats.ramp_up_score, 0.0)
 
     def test_get_repository_size(self):
         """Test repository size calculation."""

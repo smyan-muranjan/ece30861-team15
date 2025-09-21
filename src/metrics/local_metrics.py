@@ -54,23 +54,17 @@ class LocalMetricsCalculator:
             code_quality_task = self._run_cpu_bound(
                 self.calculate_code_quality,
                 repo_path)
-            ramp_up_task = self._run_cpu_bound(self.calculate_ramp_up_time,
-                                               repo_path)
 
             (bus_factor_score, bus_lat), \
-                (code_quality_score, qual_lat), \
-                (ramp_up_score, ramp_lat) = \
+                (code_quality_score, qual_lat) = \
                 await asyncio.gather(bus_factor_task,
-                                     code_quality_task,
-                                     ramp_up_task)
+                                     code_quality_task)
 
             return {
                 'bus_factor': bus_factor_score,
                 'bus_factor_latency': bus_lat,
                 'code_quality': code_quality_score,
                 'code_quality_latency': qual_lat,
-                'ramp_up_time': ramp_up_score,
-                'ramp_up_time_latency': ramp_lat,
             }
         finally:
             self.git_client.cleanup()
@@ -103,21 +97,6 @@ class LocalMetricsCalculator:
         # **FIXED**: Using the correct weighted formula
         # from project plan [cite: 65]
         return (0.6 * lint_score) + (0.4 * has_tests_score)
-
-    def calculate_ramp_up_time(self, repo_path: str) -> float:
-        """Calculates ramp-up time from docs, examples, and dependencies."""
-        ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-        # Placeholder for the required LLM analysis of the README [cite: 60]
-        readme_llm_score = ramp_up_stats.readme_quality
-        has_examples_score = 1.0 if ramp_up_stats.has_examples else 0.0
-        has_deps_score = 1.0 if ramp_up_stats.has_dependencies else 0.0
-
-        # **FIXED**: Using the correct weighted formula
-        # from project plan [cite: 60]
-        score = (0.6 * readme_llm_score) + \
-                (0.25 * has_examples_score) + \
-                (0.15 * has_deps_score)
-        return score
 
     def _get_default_metrics(self) -> Dict[str, Any]:
         """Returns a default metric structure on failure."""
