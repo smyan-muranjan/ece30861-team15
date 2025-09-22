@@ -5,6 +5,14 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Any, Dict, Optional
 
 from src.api.git_client import GitClient
+from src.metric_inputs.bus_factor_input import BusFactorInput
+from src.metric_inputs.code_quality_input import CodeQualityInput
+from src.metric_inputs.license_input import LicenseInput
+from src.metric_inputs.size_input import SizeInput
+from src.metrics.bus_factor_metric import BusFactorMetric
+from src.metrics.code_quality_metric import CodeQualityMetric
+from src.metrics.license_metric import LicenseMetric
+from src.metrics.size_metric import SizeMetric
 
 
 class LocalMetricsCalculator:
@@ -22,13 +30,25 @@ class LocalMetricsCalculator:
         self.process_pool = process_pool
         self.thread_pool = ThreadPoolExecutor(max_workers=10)
 
+        # Initialize metric instances
+        self.bus_factor_metric = BusFactorMetric(self.git_client)
+        self.code_quality_metric = CodeQualityMetric(self.git_client)
+        self.license_metric = LicenseMetric(self.git_client)
+        self.size_metric = SizeMetric(self.git_client)
+
     async def _run_cpu_bound(self, func, *args) -> Any:
         """
         Runs a CPU-bound function in the process pool and measures latency.
         """
         loop = asyncio.get_running_loop()
         start_time = time.time()
-        result = await loop.run_in_executor(self.process_pool, func, *args)
+
+        # For async functions, run them directly in the current event loop
+        if asyncio.iscoroutinefunction(func):
+            result = await func(*args)
+        else:
+            result = await loop.run_in_executor(self.process_pool, func, *args)
+
         latency = int((time.time() - start_time) * 1000)
         return result, latency
 
@@ -49,59 +69,51 @@ class LocalMetricsCalculator:
             return self._get_default_metrics()
 
         try:
-            bus_factor_task = self._run_cpu_bound(self.calculate_bus_factor,
-                                                  repo_path)
+            bus_factor_task = self._run_cpu_bound(
+                self.bus_factor_metric.calculate,
+                BusFactorInput(repo_url=repo_path))
             code_quality_task = self._run_cpu_bound(
-                self.calculate_code_quality,
-                repo_path)
+                self.code_quality_metric.calculate,
+                CodeQualityInput(repo_url=repo_path))
+            license_task = self._run_cpu_bound(
+                self.license_metric.calculate,
+                LicenseInput(repo_url=repo_path))
+            # ramp_up_task = self._run_cpu_bound(
+            #     self.ramp_up_time_metric.calculate, repo_path)
+            size_task = self._run_cpu_bound(
+                self.size_metric.calculate,
+                SizeInput(repo_url=repo_path))
 
             (bus_factor_score, bus_lat), \
-                (code_quality_score, qual_lat) = \
+                (code_quality_score, qual_lat), \
+                (license_score, license_lat), \
+                (size_score, size_lat) = \
                 await asyncio.gather(bus_factor_task,
-                                     code_quality_task)
+                                     code_quality_task,
+                                     license_task,
+                                     size_task)
 
             return {
                 'bus_factor': bus_factor_score,
                 'bus_factor_latency': bus_lat,
                 'code_quality': code_quality_score,
                 'code_quality_latency': qual_lat,
+                'license': license_score,
+                'license_latency': license_lat,
+                # 'ramp_up_time': ramp_up_score,
+                # 'ramp_up_time_latency': ramp_lat,
+                'size_score': size_score,
+                'size_score_latency': size_lat,
             }
         finally:
             self.git_client.cleanup()
-
-    # --- Metric Calculation Methods based on Project Plan ---
-
-    def calculate_bus_factor(self, repo_path: str) -> float:
-        """Calculates bus factor based on commit concentration."""
-        commit_stats = self.git_client.analyze_commits(repo_path)
-        if not commit_stats or commit_stats.total_commits == 0:
-            return 0.0
-
-        # **FIXED**: The formula in the plan is Score = 1 - Sum(pi^2),
-        # which is correct for bus factor.
-        # A lower concentration (more distributed authors)
-        # results in a higher score.
-        concentration = sum(
-            (count / commit_stats.total_commits) ** 2
-            for count in commit_stats.contributors.values()
-        )
-        return max(0.0, 1.0 - concentration)
-
-    def calculate_code_quality(self, repo_path: str) -> float:
-        """Calculates code quality from linter errors and test presence."""
-        quality_stats = self.git_client.analyze_code_quality(repo_path)
-        # Score component for linter errors, as per the plan [cite: 65]
-        lint_score = max(0.0, 1.0 - (quality_stats.lint_errors * 0.05))
-        has_tests_score = 1.0 if quality_stats.has_tests else 0.0
-
-        # **FIXED**: Using the correct weighted formula
-        # from project plan [cite: 65]
-        return (0.6 * lint_score) + (0.4 * has_tests_score)
 
     def _get_default_metrics(self) -> Dict[str, Any]:
         """Returns a default metric structure on failure."""
         return {
             'bus_factor': 0.0, 'bus_factor_latency': 0,
             'code_quality': 0.0, 'code_quality_latency': 0,
-            'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
+            'license': 0.0, 'license_latency': 0,
+            # 'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
+            'size_score': {}, 'size_score_latency': 0,
         }
