@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 from src.api.git_client import GitClient
 from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metric_inputs.code_quality_input import CodeQualityInput
+
 from src.metric_inputs.dataset_code_input import DatasetCodeInput
 from src.metric_inputs.license_input import LicenseInput
 from src.metric_inputs.size_input import SizeInput
@@ -126,5 +127,7 @@ class LocalMetricsCalculator:
             'dataset_code': 0.0, 'dataset_code_latency': 0,
             'license': 0.0, 'license_latency': 0,
             'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
+            'license': 0.0, 'license_latency': 0,
+            # 'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
             'size_score': {}, 'size_score_latency': 0,
         }

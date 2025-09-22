@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import aiohttp
 
@@ -41,9 +42,63 @@ class GenAIClient:
             prompt = f.read()
         prompt += readme_text
         response = await self.chat(prompt)
+
+        # Extract JSON object from response (handles markdown code blocks)
+        match = re.search(r'\{[^}]*\}', response)
+        if match:
+            json_str = match.group(0)
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError as e:
+                raise Exception(
+                    f"Failed to parse extracted JSON: {json_str}"
+                ) from e
+        else:
+            # Try parsing the entire response as fallback
+            try:
+                return json.loads(response)
+            except json.JSONDecodeError as e:
+                raise Exception(
+                    f"Failed to parse GenAI response as JSON: {response}"
+                ) from e
+
+    async def get_readme_clarity(self, readme_text: str) -> float:
+        with open("src/api/readme_clarity_ai_prompt.txt", "r") as f:
+            prompt = f.read()
+        prompt += readme_text
+        response = await self.chat(prompt)
+
+        # Try to extract a floating point number from the response
+        # Handle various possible formats from LLM
+
+        # First, try to parse the response directly as a float
         try:
-            return json.loads(response)
-        except json.JSONDecodeError as e:
-            raise Exception(
-                f"Failed to parse GenAI response as JSON: {response}"
-            ) from e
+            return float(response.strip())
+        except ValueError:
+            pass
+
+        # Try to find a number in the response using regex
+        # Look for patterns like "0.6", "0.85", "1.0", etc.
+        number_match = re.search(r'\b(?:0?\.\d+|1\.0+|0\.0+|1)\b', response)
+        if number_match:
+            try:
+                value = float(number_match.group(0))
+                # Ensure the value is within expected range [0, 1]
+                return max(0.0, min(1.0, value))
+            except ValueError:
+                pass
+
+        # Try to find any decimal number in the response
+        decimal_match = re.search(r'\d*\.?\d+', response)
+        if decimal_match:
+            try:
+                value = float(decimal_match.group(0))
+                # Ensure the value is within expected range [0, 1]
+                return max(0.0, min(1.0, value))
+            except ValueError:
+                pass
+
+        # If all parsing attempts fail, raise an exception
+        raise Exception(
+            f"Failed to extract a valid float from GenAI response: {response}"
+        )
