@@ -13,6 +13,12 @@ from src.metrics.bus_factor_metric import BusFactorMetric
 from src.metrics.code_quality_metric import CodeQualityMetric
 from src.metrics.license_metric import LicenseMetric
 from src.metrics.size_metric import SizeMetric
+from src.metric_inputs.bus_factor_input import BusFactorInput
+from src.metric_inputs.code_quality_input import CodeQualityInput
+from src.metric_inputs.size_input import SizeInput
+from src.metrics.bus_factor_metric import BusFactorMetric
+from src.metrics.code_quality_metric import CodeQualityMetric
+from src.metrics.size_metric import SizeMetric
 
 
 class LocalMetricsCalculator:
@@ -34,6 +40,11 @@ class LocalMetricsCalculator:
         self.bus_factor_metric = BusFactorMetric(self.git_client)
         self.code_quality_metric = CodeQualityMetric(self.git_client)
         self.license_metric = LicenseMetric(self.git_client)
+        self.size_metric = SizeMetric(self.git_client)
+
+        # Initialize metric instances
+        self.bus_factor_metric = BusFactorMetric(self.git_client)
+        self.code_quality_metric = CodeQualityMetric(self.git_client)
         self.size_metric = SizeMetric(self.git_client)
 
     async def _run_cpu_bound(self, func, *args) -> Any:
