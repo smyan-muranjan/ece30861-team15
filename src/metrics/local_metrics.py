@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional
 from src.api.git_client import GitClient
 from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metric_inputs.code_quality_input import CodeQualityInput
-
 from src.metric_inputs.dataset_code_input import DatasetCodeInput
 from src.metric_inputs.license_input import LicenseInput
 from src.metric_inputs.size_input import SizeInput
