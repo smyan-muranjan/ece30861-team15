@@ -32,6 +32,13 @@ async def test_analyze_repository_success(mock_git_client):
     mock_git_client.analyze_code_quality.return_value = MagicMock(
         lint_errors=0, has_tests=True
     )
+    mock_git_client.read_readme.return_value = """
+# Project Title
+
+## License
+
+This project is licensed under the MIT License.
+    """.strip()
     # mock_git_client.analyze_ramp_up_time.return_value = MagicMock(
     #     readme_quality=1.0, has_examples=True, has_dependencies=True
     # )
@@ -49,7 +56,7 @@ async def test_analyze_repository_success(mock_git_client):
     assert result['bus_factor'] == 0.5
     assert result['code_quality'] == 1.0
     assert result['license'] == 1.0
-    # # assert result['ramp_up_time'] == 1.0
+    # assert result['ramp_up_time'] == 1.0
     mock_git_client.cleanup.assert_called_once()
 
 
@@ -71,5 +78,5 @@ async def test_analyze_repository_clone_fails(mock_git_client):
     assert result['bus_factor'] == 0.0
     assert result['code_quality'] == 0.0
     assert result['license'] == 0.0
-    # # assert result['ramp_up_time'] == 0.0
+    # assert result['ramp_up_time'] == 0.0
     mock_git_client.cleanup.assert_not_called()
