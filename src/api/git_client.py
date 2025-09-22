@@ -315,6 +315,31 @@ class GitClient:
                 'aws_server': 0.0
             }
 
+    def read_readme(self, repo_path: str) -> Optional[str]:
+        """
+        Read the README file from a repository.
+
+        :param repo_path: Path to local repository
+        :return: README content as string, or None if not found
+        """
+        try:
+            if not os.path.exists(repo_path):
+                return None
+
+            repo_path_obj = Path(repo_path)
+            readme_files = list(repo_path_obj.glob("README*"))
+
+            if not readme_files:
+                return None
+
+            readme_path = readme_files[0]
+            with open(readme_path, 'r', encoding='utf-8') as f:
+                return f.read()
+
+        except Exception as e:
+            logging.warning(f"Failed to read README: {str(e)}")
+            return None
+
     def cleanup(self):
         """Clean up temporary directories."""
         for temp_dir in self.temp_dirs:
