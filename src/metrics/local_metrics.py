@@ -7,10 +7,12 @@ from typing import Any, Dict, Optional
 from src.api.git_client import GitClient
 from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metric_inputs.code_quality_input import CodeQualityInput
+from src.metric_inputs.dataset_code_input import DatasetCodeInput
 from src.metric_inputs.license_input import LicenseInput
 from src.metric_inputs.size_input import SizeInput
 from src.metrics.bus_factor_metric import BusFactorMetric
 from src.metrics.code_quality_metric import CodeQualityMetric
+from src.metrics.dataset_code_metric import DatasetCodeMetric
 from src.metrics.license_metric import LicenseMetric
 from src.metrics.size_metric import SizeMetric
 
@@ -33,6 +35,7 @@ class LocalMetricsCalculator:
         # Initialize metric instances
         self.bus_factor_metric = BusFactorMetric(self.git_client)
         self.code_quality_metric = CodeQualityMetric(self.git_client)
+        self.dataset_code_metric = DatasetCodeMetric(self.git_client)
         self.license_metric = LicenseMetric(self.git_client)
         self.size_metric = SizeMetric(self.git_client)
 
@@ -75,6 +78,9 @@ class LocalMetricsCalculator:
             code_quality_task = self._run_cpu_bound(
                 self.code_quality_metric.calculate,
                 CodeQualityInput(repo_url=repo_path))
+            dataset_code_task = self._run_cpu_bound(
+                self.dataset_code_metric.calculate,
+                DatasetCodeInput(repo_url=repo_path))
             license_task = self._run_cpu_bound(
                 self.license_metric.calculate,
                 LicenseInput(repo_url=repo_path))
@@ -86,10 +92,12 @@ class LocalMetricsCalculator:
 
             (bus_factor_score, bus_lat), \
                 (code_quality_score, qual_lat), \
+                (dataset_code_score, dataset_code_lat), \
                 (license_score, license_lat), \
                 (size_score, size_lat) = \
                 await asyncio.gather(bus_factor_task,
                                      code_quality_task,
+                                     dataset_code_task,
                                      license_task,
                                      size_task)
 
@@ -98,6 +106,8 @@ class LocalMetricsCalculator:
                 'bus_factor_latency': bus_lat,
                 'code_quality': code_quality_score,
                 'code_quality_latency': qual_lat,
+                'dataset_code': dataset_code_score,
+                'dataset_code_latency': dataset_code_lat,
                 'license': license_score,
                 'license_latency': license_lat,
                 # 'ramp_up_time': ramp_up_score,
@@ -113,7 +123,8 @@ class LocalMetricsCalculator:
         return {
             'bus_factor': 0.0, 'bus_factor_latency': 0,
             'code_quality': 0.0, 'code_quality_latency': 0,
+            'dataset_code': 0.0, 'dataset_code_latency': 0,
             'license': 0.0, 'license_latency': 0,
-            # 'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
+            'ramp_up_time': 0.0, 'ramp_up_time_latency': 0,
             'size_score': {}, 'size_score_latency': 0,
         }
