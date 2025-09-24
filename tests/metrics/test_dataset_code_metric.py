@@ -16,7 +16,7 @@ class TestDatasetCodeMetric:
     async def test_calculate_both_dataset_and_training_code(self):
         mock_git_client = Mock()
         mock_git_client.read_readme.return_value = """
-        # Model Training
+        # Training
 
         ## Dataset
         This model was trained on the IMDB dataset available at:
@@ -27,7 +27,6 @@ class TestDatasetCodeMetric:
         """
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test files
             (Path(temp_dir) / "train.py").touch()
             (Path(temp_dir) / "model.py").touch()
             (Path(temp_dir) / "utils.py").touch()
@@ -54,7 +53,6 @@ class TestDatasetCodeMetric:
         """
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test files (no training scripts)
             (Path(temp_dir) / "model.py").touch()
             (Path(temp_dir) / "inference.py").touch()
             (Path(temp_dir) / "utils.py").touch()
@@ -67,7 +65,6 @@ class TestDatasetCodeMetric:
 
     @pytest.mark.asyncio
     async def test_calculate_only_training_code(self):
-        """Test case where only training code is present."""
         mock_git_client = Mock()
 
         mock_git_client.read_readme.return_value = """
@@ -108,7 +105,6 @@ class TestDatasetCodeMetric:
         """
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test files (no training scripts)
             (Path(temp_dir) / "model.py").touch()
             (Path(temp_dir) / "inference.py").touch()
             (Path(temp_dir) / "requirements.txt").touch()
@@ -121,7 +117,6 @@ class TestDatasetCodeMetric:
 
     @pytest.mark.asyncio
     async def test_calculate_with_config_file_dataset_info(self):
-        """Test case where dataset info is found in config.json file."""
         mock_git_client = Mock()
 
         mock_git_client.read_readme.return_value = """
@@ -131,7 +126,6 @@ class TestDatasetCodeMetric:
         """
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test files (no training scripts)
             (Path(temp_dir) / "model.py").touch()
             (Path(temp_dir) / "inference.py").touch()
 
@@ -178,7 +172,6 @@ class TestDatasetCodeMetric:
 
         for filename, expected_score in test_cases:
             with tempfile.TemporaryDirectory() as temp_dir:
-                # Create test file
                 (Path(temp_dir) / filename).touch()
 
                 metric = DatasetCodeMetric(mock_git_client)
@@ -190,11 +183,9 @@ class TestDatasetCodeMetric:
 
     @pytest.mark.asyncio
     async def test_calculate_various_dataset_patterns(self):
-        """Test detection of various dataset reference patterns."""
         mock_git_client = Mock()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create test file (no training scripts)
             (Path(temp_dir) / "model.py").touch()
 
             test_cases = [
@@ -218,11 +209,9 @@ class TestDatasetCodeMetric:
 
     @pytest.mark.asyncio
     async def test_calculate_empty_readme_and_no_files(self):
-        """Test case with empty README and no Python files."""
         mock_git_client = Mock()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Empty directory (no files)
             mock_git_client.read_readme.return_value = ""
 
             metric = DatasetCodeMetric(mock_git_client)
@@ -233,14 +222,11 @@ class TestDatasetCodeMetric:
 
     @pytest.mark.asyncio
     async def test_calculate_readme_none(self):
-        """Test case where README read returns None."""
         mock_git_client = Mock()
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Mock None README
             mock_git_client.read_readme.return_value = None
 
-            # Create test file (no training scripts)
             (Path(temp_dir) / "model.py").touch()
 
             metric = DatasetCodeMetric(mock_git_client)
@@ -248,3 +234,166 @@ class TestDatasetCodeMetric:
                 DatasetCodeInput(repo_url=temp_dir))
 
             assert result == 0.0
+
+    @pytest.mark.asyncio
+    async def test_determine_repository_type_model(self):
+        mock_git_client = Mock()
+        mock_git_client.read_readme.return_value = """
+        # Pre-trained Model
+
+        This is a pre-trained BERT model for text classification.
+        The model weights are available for download.
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create model-related files
+            (Path(temp_dir) / "model.py").touch()
+            (Path(temp_dir) / "inference.py").touch()
+            (Path(temp_dir) / "checkpoints").mkdir()
+
+            metric = DatasetCodeMetric(mock_git_client)
+            repo_type = metric._determine_repository_type(temp_dir)
+
+            assert repo_type == 'model'
+
+    @pytest.mark.asyncio
+    async def test_determine_repository_type_dataset(self):
+        mock_git_client = Mock()
+        mock_git_client.read_readme.return_value = """
+        # Dataset Collection
+
+        This repository contains the IMDB movie review dataset.
+        The data is available in CSV format.
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create dataset-related files
+            (Path(temp_dir) / "data.csv").touch()
+            (Path(temp_dir) / "dataset.py").touch()
+            (Path(temp_dir) / "data").mkdir()
+
+            metric = DatasetCodeMetric(mock_git_client)
+            repo_type = metric._determine_repository_type(temp_dir)
+
+            assert repo_type == 'dataset'
+
+    @pytest.mark.asyncio
+    async def test_determine_repository_type_training(self):
+        mock_git_client = Mock()
+        mock_git_client.read_readme.return_value = """
+        # Training Code
+
+        This repository contains training scripts for fine-tuning BERT.
+        Run the experiments with the provided scripts.
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            (Path(temp_dir) / "train.py").touch()
+            (Path(temp_dir) / "experiment.py").touch()
+            (Path(temp_dir) / "experiments").mkdir()
+
+            metric = DatasetCodeMetric(mock_git_client)
+            repo_type = metric._determine_repository_type(temp_dir)
+
+            assert repo_type == 'training'
+
+    @pytest.mark.asyncio
+    async def test_find_dataset_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create dataset files
+            (Path(temp_dir) / "data.csv").touch()
+            (Path(temp_dir) / "train.json").touch()
+            (Path(temp_dir) / "data").mkdir()
+
+            metric = DatasetCodeMetric()
+            has_dataset_files = metric._find_dataset_files(temp_dir)
+
+            assert has_dataset_files is True
+
+    @pytest.mark.asyncio
+    async def test_is_training_file_by_content(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create a file with training content
+            training_file = Path(temp_dir) / "custom_training.py"
+            training_file.write_text("""
+            import torch
+            from torch.optim import Adam
+
+            def train_model():
+                model = MyModel()
+                optimizer = Adam(model.parameters())
+                for epoch in range(10):
+                    model.train()
+                    for batch in train_dataloader:
+                        optimizer.zero_grad()
+                        loss = model(batch)
+                        loss.backward()
+                        optimizer.step()
+            """)
+
+            metric = DatasetCodeMetric()
+            is_training = metric._is_training_file_by_content(training_file)
+
+            assert is_training is True
+
+    @pytest.mark.asyncio
+    async def test_calculate_with_jupyter_notebooks(self):
+        mock_git_client = Mock()
+        mock_git_client.read_readme.return_value = """
+        # Model Training Notebooks
+
+        This repository contains Jupyter notebooks for training models.
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            (Path(temp_dir) / "train_model.ipynb").touch()
+            (Path(temp_dir) / "finetune_bert.ipynb").touch()
+            metric = DatasetCodeMetric(mock_git_client)
+            result = await metric.calculate(
+                DatasetCodeInput(repo_url=temp_dir))
+
+            assert result == 0.5
+
+    @pytest.mark.asyncio
+    async def test_calculate_with_enhanced_dataset_patterns(self):
+        mock_git_client = Mock()
+
+        test_cases = [
+            ("Dataset: https://data.world/sentiment-analysis", 0.5),
+            ("Training data: https://paperswithcode.com/datasets/imdb", 0.5),
+            ("Download from: https://mlcommons.org/datasets/", 0.5),
+            ("OpenML dataset: https://openml.org/d/12345", 0.5),
+            ("No dataset information", 0.0)
+        ]
+
+        for readme_content, expected_score in test_cases:
+            mock_git_client.read_readme.return_value = readme_content
+
+            with tempfile.TemporaryDirectory() as temp_dir:
+                (Path(temp_dir) / "model.py").touch()
+
+                metric = DatasetCodeMetric(mock_git_client)
+                result = await metric.calculate(
+                    DatasetCodeInput(repo_url=temp_dir))
+
+                assert result == expected_score, \
+                    f"Failed for content: {readme_content}"
+
+    @pytest.mark.asyncio
+    async def test_calculate_with_data_directories(self):
+        mock_git_client = Mock()
+        mock_git_client.read_readme.return_value = """
+        # Model Documentation
+
+        This is a machine learning model.
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            (Path(temp_dir) / "data").mkdir()
+            (Path(temp_dir) / "model.py").touch()
+
+            metric = DatasetCodeMetric(mock_git_client)
+            result = await metric.calculate(
+                DatasetCodeInput(repo_url=temp_dir))
+
+            assert result == 0.5
