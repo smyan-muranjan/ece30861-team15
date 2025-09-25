@@ -62,14 +62,18 @@ async def test_parallelism_performance():
 
         print(f"\nSequential-like execution time: {sequential_time:.4f}s")
         print(f"Concurrent execution time:      {parallel_time:.4f}s")
-        
+
         # Calculate speedup ratio
-        speedup_ratio = sequential_time / parallel_time if parallel_time > 0 else 0
+        speedup_ratio = sequential_time / parallel_time \
+            if parallel_time > 0 else 0
         print(f"Speedup ratio: {speedup_ratio:.2f}x")
 
         # Assert that the parallel version is substantially faster
-        # Use a more lenient threshold (1.5x instead of 2x) to account for CI environment variations
+        # Use a more lenient threshold (1.5x instead of 2x)
+        # to account for CI environment variations
         assert parallel_time < sequential_time, \
-            f"Concurrent execution ({parallel_time:.4f}s) should be faster than sequential ({sequential_time:.4f}s)"
+            f"Concurrent execution ({parallel_time:.4f}s) should be" \
+            f"faster than sequential ({sequential_time:.4f}s)"
         assert parallel_time < sequential_time * 0.67, \
-            f"Concurrent execution should be at least 1.5x faster. Got {speedup_ratio:.2f}x speedup."
+            f"Concurrent execution should be at least 1.5x faster. " \
+            f"Got {speedup_ratio:.2f}x speedup."
