@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import ssl
 
 import aiohttp
 
@@ -24,7 +25,13 @@ class GenAIClient:
                 }
             ]
         }
-        async with aiohttp.ClientSession() as session:
+        # Create SSL context that doesn't verify certificates for servers
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(
                 self.url, headers=self.headers, json=body
             ) as response:
@@ -100,3 +107,23 @@ class GenAIClient:
         raise Exception(
             f"Failed to extract a valid float from GenAI response: {response}"
         )
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main():
+        client = GenAIClient()
+        readme_text = (
+            "This is a sample README file for a machine learning model. "
+            "It includes performance metrics such as accuracy and F1-score. "
+            "The model achieves 92% accuracy on the test set and has been "
+            "benchmarked against several baselines."
+        )
+        performance_claims = await client.get_performance_claims(readme_text)
+        print("Performance Claims:", performance_claims)
+
+        clarity_score = await client.get_readme_clarity(readme_text)
+        print("Readme Clarity Score:", clarity_score)
+
+    asyncio.run(main())

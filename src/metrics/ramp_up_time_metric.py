@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from src.api.gen_ai_client import GenAIClient
 from src.api.git_client import GitClient
@@ -11,7 +11,11 @@ class RampUpTimeMetric(Metric):
     HAS_EXAMPLES_WEIGHT = 0.25
     HAS_DEPENDENCIES_WEIGHT = 0.15
 
-    def __init__(self, git_client: GitClient = None, gen_ai_client: GenAIClient = None):
+    def __init__(
+        self,
+        git_client: Optional[GitClient] = None,
+        gen_ai_client: Optional[GenAIClient] = None
+    ):
         self.git_client = git_client or GitClient()
         self.gen_ai_client = gen_ai_client or GenAIClient()
 
@@ -19,8 +23,10 @@ class RampUpTimeMetric(Metric):
         assert isinstance(metric_input, RampUpTimeInput)
         llm_score = await self.gen_ai_client.get_readme_clarity(
             metric_input.readme_text
-            )
-        repo_results = self.git_client.analyze_ramp_up_time(metric_input.repo_path)
+        )
+        repo_results = self.git_client.analyze_ramp_up_time(
+            metric_input.repo_path
+        )
         examples_score = repo_results.get('has_examples', False)
         dependencies_score = repo_results.get('has_dependencies', False)
         return (

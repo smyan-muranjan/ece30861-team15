@@ -36,9 +36,12 @@ else:
 # --- End of logging setup ---
 
 
-def parse_url_file(file_path: str) -> List[Tuple[Optional[str], Optional[str], str]]:
+def parse_url_file(file_path: str) -> List[
+    Tuple[Optional[str], Optional[str], str]
+]:
     """
-    Reads a file and returns a list of tuples containing (code_link, dataset_link, model_link).
+    Reads a file and returns a list of tuples containing
+    (code_link, dataset_link, model_link).
     Format: code_link, dataset_link, model_link per line.
     Code and dataset links can be empty.
     """
@@ -50,22 +53,27 @@ def parse_url_file(file_path: str) -> List[Tuple[Optional[str], Optional[str], s
                 line = line.strip()
                 if not line:
                     continue
-                
+
                 parts = [part.strip() for part in line.split(',')]
                 if len(parts) != 3:
-                    logging.warning(f"Line {line_num} has {len(parts)} parts, expected 3. Skipping.")
+                    logging.warning(
+                        "Line %d has %d parts, expected 3. Skipping.",
+                        line_num, len(parts)
+                    )
                     continue
-                
+
                 code_link = parts[0] if parts[0] else None
                 dataset_link = parts[1] if parts[1] else None
                 model_link = parts[2] if parts[2] else None
-                
+
                 if not model_link:
-                    logging.warning(f"Line {line_num} has no model link. Skipping.")
+                    logging.warning(
+                        "Line %d has no model link. Skipping.", line_num
+                    )
                     continue
-                
+
                 entries.append((code_link, dataset_link, model_link))
-        
+
         logging.info(f"Found {len(entries)} valid entries.")
         return entries
     except FileNotFoundError:
@@ -102,7 +110,7 @@ def calculate_net_score(metrics: Dict[str, Any]) -> float:
 
 
 async def analyze_entry(
-    entry: Tuple[Optional[str], Optional[str], str], 
+    entry: Tuple[Optional[str], Optional[str], str],
     process_pool: ProcessPoolExecutor,
     encountered_datasets: set
 ) -> Dict[str, Any]:
@@ -112,7 +120,7 @@ async def analyze_entry(
     """
     code_link, dataset_link, model_link = entry
     start_time = time.time()
-    
+
     calculator = MetricsCalculator(process_pool)
     local_metrics = await calculator.analyze_entry(
         code_link, dataset_link, model_link, encountered_datasets
@@ -132,45 +140,60 @@ async def analyze_entry(
         "net_score": round(net_score, 2),
         "net_score_latency": total_latency_ms,
         "ramp_up_time": local_metrics.get('ramp_up_time', 0.0),
-        "ramp_up_time_latency": local_metrics.get('ramp_up_time_latency', 0),
+        "ramp_up_time_latency": local_metrics.get(
+            'ramp_up_time_latency', 0
+        ),
         "bus_factor": local_metrics.get('bus_factor', 0.0),
         "bus_factor_latency": local_metrics.get('bus_factor_latency', 0),
         "performance_claims": local_metrics.get('performance_claims', 0.0),
-        "performance_claims_latency": local_metrics.get('performance_claims_latency', 0),
+        "performance_claims_latency": local_metrics.get(
+            'performance_claims_latency', 0
+        ),
         "license": local_metrics.get('license', 0.0),
         "license_latency": local_metrics.get('license_latency', 0),
         "size_score": local_metrics.get('size_score', {}),
         "size_score_latency": local_metrics.get('size_score_latency', 0),
-        "dataset_and_code_score": local_metrics.get('dataset_and_code_score', 0.0),
-        "dataset_and_code_score_latency": local_metrics.get('dataset_and_code_score_latency', 0),
+        "dataset_and_code_score": local_metrics.get(
+            'dataset_and_code_score', 0.0
+        ),
+        "dataset_and_code_score_latency": local_metrics.get(
+            'dataset_and_code_score_latency', 0
+        ),
         "dataset_quality": local_metrics.get('dataset_quality', 0.0),
-        "dataset_quality_latency": local_metrics.get('dataset_quality_latency', 0),
+        "dataset_quality_latency": local_metrics.get(
+            'dataset_quality_latency', 0
+        ),
         "code_quality": local_metrics.get('code_quality', 0.0),
         "code_quality_latency": local_metrics.get('code_quality_latency', 0),
     }
     return scorecard
 
 
-async def process_entries(entries: List[Tuple[Optional[str], Optional[str], str]]) -> None:
+async def process_entries(
+    entries: List[Tuple[Optional[str], Optional[str], str]]
+) -> None:
     """
     Processes each entry concurrently using an advanced hybrid model.
     """
-    logging.info(f"Processing {len(entries)} entries with advanced concurrency.")
+    logging.info(
+        "Processing %d entries with advanced concurrency.", len(entries)
+    )
     # Manages workers based on available CPU cores,
     # as requested by Sarah [cite: 386]
     max_workers = os.cpu_count() or 4
-    logging.info(f"Using {max_workers} worker processes.")
+    logging.info("Using %d worker processes.", max_workers)
 
     # Track encountered datasets to handle shared datasets
-    encountered_datasets = set()
+    encountered_datasets: set[str] = set()
 
     with ProcessPoolExecutor(max_workers=max_workers) as process_pool:
-        tasks = [analyze_entry(entry, process_pool, encountered_datasets) for entry in entries]
+        tasks = [analyze_entry(entry, process_pool, encountered_datasets)
+                 for entry in entries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
             if isinstance(result, Exception):
-                logging.error(f"An analysis task failed: {result}")
+                logging.error("An analysis task failed: %s", result)
             else:
                 # Prints output to stdout in NDJSON format [cite: 407]
                 print(json.dumps(result))

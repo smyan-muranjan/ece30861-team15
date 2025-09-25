@@ -6,53 +6,62 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
+from src.api.gen_ai_client import GenAIClient
 from src.api.git_client import GitClient
 from src.api.hugging_face_client import HuggingFaceClient
-from src.api.gen_ai_client import GenAIClient
-from src.metric_inputs.performance_input import PerformanceInput
 from src.metric_inputs.bus_factor_input import BusFactorInput
 from src.metric_inputs.code_quality_input import CodeQualityInput
 from src.metric_inputs.dataset_quality_input import DatasetQualityInput
-from src.metric_inputs.ramp_up_time_input import RampUpTimeInput
 from src.metric_inputs.license_input import LicenseInput
+from src.metric_inputs.performance_input import PerformanceInput
+from src.metric_inputs.ramp_up_time_input import RampUpTimeInput
 from src.metric_inputs.size_input import SizeInput
 from src.metrics.bus_factor_metric import BusFactorMetric
 from src.metrics.code_quality_metric import CodeQualityMetric
-from src.metrics.license_metric import LicenseMetric
-from src.metrics.size_metric import SizeMetric
-from src.metrics.ramp_up_time_metric import RampUpTimeMetric
 from src.metrics.dataset_quality_metric import DatasetQualityMetric
+from src.metrics.license_metric import LicenseMetric
 from src.metrics.performance_claims_metric import PerformanceClaimsMetric
+from src.metrics.ramp_up_time_metric import RampUpTimeMetric
+from src.metrics.size_metric import SizeMetric
 
 
 def extract_hf_repo_id(url: str) -> str:
     """
     Extracts the repo_id from a Hugging Face URL (dataset or model).
-    Examples: 
+    Examples:
     - https://huggingface.co/datasets/allenai/c4 -> allenai/c4
-    - https://huggingface.co/ibm-granite/granite-docling-258M -> ibm-granite/granite-docling-258M
-    - https://huggingface.co/datasets/bookcorpus/bookcorpus -> bookcorpus/bookcorpus
+    - https://huggingface.co/ibm-granite/granite-docling-258M ->
+      ibm-granite/granite-docling-258M
+    - https://huggingface.co/datasets/bookcorpus/bookcorpus ->
+      bookcorpus/bookcorpus
     """
     # Remove trailing slashes and fragments
     url = url.rstrip('/')
-    
-    # Pattern for datasets: huggingface.co/datasets/{org}/{name} or huggingface.co/datasets/{name}
-    dataset_match = re.search(r"huggingface\.co/datasets/([^/?#]+(?:/[^/?#]+)?)", url)
+
+    # Pattern for datasets: huggingface.co/datasets/{org}/{name} or
+    # huggingface.co/datasets/{name}
+    dataset_match = re.search(
+        r"huggingface\.co/datasets/([^/?#]+(?:/[^/?#]+)?)", url
+    )
     if dataset_match:
         return dataset_match.group(1)
-    
-    # Pattern for regular models: huggingface.co/{org}/{name} or huggingface.co/{name}
+
+    # Pattern for regular models: huggingface.co/{org}/{name} or
+    # huggingface.co/{name}.
     # But exclude spaces: huggingface.co/spaces/{org}/{name}
-    model_match = re.search(r"huggingface\.co/(?!spaces/)([^/?#]+(?:/[^/?#]+)?)", url)
+    model_match = re.search(
+        r"huggingface\.co/(?!spaces/)([^/?#]+(?:/[^/?#]+)?)", url
+    )
     if model_match:
         return model_match.group(1)
-    
+
     raise ValueError(f"Invalid Hugging Face URL: {url}")
 
 
 def is_code_repository(url: str) -> bool:
     """
-    Determines if a URL is a code repository (GitHub, GitLab, or Hugging Face Spaces).
+    Determines if a URL is a code repository
+    (GitHub, GitLab, or Hugging Face Spaces).
     """
     if not url:
         return False
@@ -89,8 +98,8 @@ def is_model_url(url: str) -> bool:
         return False
     parsed = urlparse(url.lower())
     return (
-        'huggingface.co' in parsed.netloc and 
-        '/datasets/' not in parsed.path and 
+        'huggingface.co' in parsed.netloc and
+        '/datasets/' not in parsed.path and
         '/spaces/' not in parsed.path
     )
 
@@ -98,13 +107,16 @@ def is_model_url(url: str) -> bool:
 class MetricsCalculator:
     """
     Comprehensive metrics calculator for ML model evaluation.
-    
-    Analyzes code repositories, datasets, and ML models to compute various quality metrics
-    including bus factor, code quality, license compliance, ramp-up time, dataset quality,
-    performance claims, and overall size metrics. Supports concurrent execution and handles
+
+    Analyzes code repositories, datasets, and ML models to compute various
+    quality metrics including bus factor, code quality, license compliance,
+    ramp-up time, dataset quality,
+    performance claims, and overall size metrics.
+    Supports concurrent execution and handles
     different URL types (GitHub, GitLab, Hugging Face datasets/models/spaces).
-    
-    The calculator can process entries containing code, dataset, and model links,
+
+    The calculator can process entries containing
+    code, dataset, and model links,
     handling cases where code or dataset links may be missing.
     """
 
@@ -114,8 +126,9 @@ class MetricsCalculator:
         github_token: Optional[str] = None
     ):
         """
-        Initialize the metrics calculator with necessary API clients and metric instances.
-        
+        Initialize the metrics calculator with necessary API clients and
+        metric instances.
+
         Args:
             process_pool: ProcessPoolExecutor for CPU-bound operations
             github_token: Optional GitHub token for API access
@@ -131,18 +144,22 @@ class MetricsCalculator:
         self.code_quality_metric = CodeQualityMetric(self.git_client)
         self.license_metric = LicenseMetric(self.git_client)
         self.size_metric = SizeMetric(self.git_client)
-        self.ramp_up_time_metric = RampUpTimeMetric(self.git_client, self.gen_ai_client)
+        self.ramp_up_time_metric = RampUpTimeMetric(
+            self.git_client, self.gen_ai_client
+        )
         self.dataset_quality_metric = DatasetQualityMetric(self.hf_client)
-        self.performance_claims_metric = PerformanceClaimsMetric(self.gen_ai_client)
+        self.performance_claims_metric = PerformanceClaimsMetric(
+            self.gen_ai_client
+        )
 
     async def _run_cpu_bound(self, func, *args) -> Any:
         """
         Runs a CPU-bound function in the process pool and measures latency.
-        
+
         Args:
             func: Function to execute
             *args: Arguments to pass to the function
-            
+
         Returns:
             Tuple of (result, latency_ms)
         """
@@ -160,12 +177,13 @@ class MetricsCalculator:
 
     async def analyze_repository(self, url: str) -> Dict[str, Any]:
         """
-        Clones and analyzes a single repository, running all metric calculations
+        Clones and analyzes a single repository,
+        running all metric calculations
         in parallel for optimal performance.
-        
+
         Args:
             url: Repository URL to analyze
-            
+
         Returns:
             Dictionary containing all computed metrics and their latencies
         """
@@ -197,19 +215,21 @@ class MetricsCalculator:
             license_task = self._run_cpu_bound(
                 self.license_metric.calculate,
                 LicenseInput(repo_url=repo_path))
+            readme_text = self.git_client.read_readme(repo_path) or ""
             ramp_up_task = self._run_cpu_bound(
                 self.ramp_up_time_metric.calculate,
                 RampUpTimeInput(
                     repo_path=repo_path,
-                    readme_text=self.git_client.read_readme(repo_path)))
+                    readme_text=readme_text))
             dataset_quality_task = self._run_cpu_bound(
                 self.dataset_quality_metric.calculate,
-                DatasetQualityInput(repo_id=repo_id) if repo_id else DatasetQualityInput(repo_id="")
+                DatasetQualityInput(repo_id=repo_id)
+                if repo_id else DatasetQualityInput(repo_id="")
             )
             performance_claims_task = self._run_cpu_bound(
                 self.performance_claims_metric.calculate,
                 PerformanceInput(
-                    readme_text=self.git_client.read_readme(repo_path))
+                    readme_text=readme_text)
             )
             size_task = self._run_cpu_bound(
                 self.size_metric.calculate,
@@ -250,98 +270,88 @@ class MetricsCalculator:
             self.git_client.cleanup()
 
     async def analyze_entry(
-        self, 
-        code_link: Optional[str], 
-        dataset_link: Optional[str], 
+        self,
+        code_link: Optional[str],
+        dataset_link: Optional[str],
         model_link: str,
         encountered_datasets: set
     ) -> Dict[str, Any]:
         """
         Analyzes a complete entry with code, dataset, and model links.
-        
+
         Handles cases where code/dataset links may be empty and determines
         the appropriate analysis strategy based on available information.
         Tracks encountered datasets to support shared dataset inference.
-        
+
         Args:
-            code_link: Optional URL to code repository (GitHub, GitLab, HF Spaces)
+            code_link: Optional URL to code repository
             dataset_link: Optional URL to dataset (HF datasets, ImageNet, etc.)
             model_link: Required URL to ML model (typically Hugging Face)
             encountered_datasets: Set to track previously seen datasets
-            
+
         Returns:
             Dictionary containing all computed metrics and combined scores
         """
-        logging.info(f"Analyzing entry - Code: {code_link}, Dataset: {dataset_link}, Model: {model_link}")
-        
+        logging.info(
+            "Analyzing entry - Code: %s, Dataset: %s, Model: %s",
+            code_link, dataset_link, model_link
+        )
+
         # Determine the primary repository to analyze
         primary_repo_url = None
         if code_link and is_code_repository(code_link):
             primary_repo_url = code_link
         elif is_code_repository(model_link):
             primary_repo_url = model_link
-        
-        # If no code repository available, try to analyze the model URL as repository
+
+        # If no code repository available,
+        # try to analyze the model URL as repository
         if not primary_repo_url:
             primary_repo_url = model_link
-        
+
         # Handle dataset tracking
         if dataset_link:
             encountered_datasets.add(dataset_link)
-        else:
-            # Try to infer dataset from model README if dataset_link is empty
-            dataset_link = self._infer_dataset_from_model(model_link, encountered_datasets)
-        
+
         # Analyze the primary repository
-        repo_metrics = await self.analyze_repository(primary_repo_url) if primary_repo_url else self._get_default_metrics()
-        
+        repo_metrics = (await self.analyze_repository(primary_repo_url)
+                        if primary_repo_url else self._get_default_metrics())
+
         # Add dataset quality analysis if we have a dataset
         if dataset_link and is_dataset_url(dataset_link):
-            dataset_quality_metrics = await self._analyze_dataset_quality(dataset_link)
+            dataset_quality_metrics = await self._analyze_dataset_quality(
+                dataset_link
+            )
             repo_metrics.update(dataset_quality_metrics)
-        
+
         # Calculate dataset and code score
         dataset_and_code_score = self._calculate_dataset_and_code_score(
             code_link, dataset_link, repo_metrics
         )
         repo_metrics['dataset_and_code_score'] = dataset_and_code_score
         repo_metrics['dataset_and_code_score_latency'] = 0  # Placeholder
-        
+
         return repo_metrics
-    
-    def _infer_dataset_from_model(self, model_link: str, encountered_datasets: set) -> Optional[str]:
-        """
-        Attempts to infer dataset from model README by checking against encountered datasets.
-        
-        This is a placeholder for more sophisticated inference logic that would
-        analyze the model's README file to identify references to previously
-        encountered datasets.
-        
-        Args:
-            model_link: URL of the model to analyze
-            encountered_datasets: Set of previously encountered dataset URLs
-            
-        Returns:
-            Inferred dataset URL or None if no dataset can be inferred
-        """
-        # For now, return None - this would need README analysis in future phases
-        return None
-    
-    async def _analyze_dataset_quality(self, dataset_link: str) -> Dict[str, Any]:
+
+    async def _analyze_dataset_quality(
+        self, dataset_link: str
+    ) -> Dict[str, Any]:
         """
         Analyzes dataset quality for the given dataset link.
-        
-        Currently supports Hugging Face datasets only. For other dataset sources,
-        returns a neutral quality score since analysis tools are not available.
-        
+
+        Currently supports Hugging Face datasets only.
+        For other dataset sources, returns a neutral quality score
+        since analysis tools are not available.
+
         Args:
             dataset_link: URL of the dataset to analyze
-            
+
         Returns:
             Dictionary with dataset_quality score and latency
         """
         try:
-            # Only analyze Hugging Face datasets since that's what the metric supports
+            # Only analyze Hugging Face datasets
+            # since that's what the metric supports
             if "huggingface.co/datasets/" in dataset_link:
                 repo_id = extract_hf_repo_id(dataset_link)
                 dataset_quality_score, dataset_lat = await self._run_cpu_bound(
@@ -353,58 +363,70 @@ class MetricsCalculator:
                     'dataset_quality_latency': dataset_lat,
                 }
             else:
-                # For non-Hugging Face datasets, we can't calculate quality with current tools
+                # For non-Hugging Face datasets, we can't
+                # calculate quality with current tools
                 # Return a neutral score (0.5) to indicate "unknown quality"
-                logging.info(f"Dataset quality analysis not supported for non-HF dataset: {dataset_link}")
+                logging.info(
+                    "Dataset quality not supported for non-HF dataset: "
+                    f"{dataset_link}"
+                )
                 return {
-                    'dataset_quality': 0.5,  # Neutral score for unsupported datasets
+                    'dataset_quality': 0.5,  # Neutral score for unsupported
                     'dataset_quality_latency': 0,
                 }
         except ValueError as e:
-            logging.error(f"Failed to extract repo_id from dataset URL {dataset_link}: {e}")
+            logging.error(
+                f"Failed to extract repo_id from dataset URL "
+                f"{dataset_link}: {e}"
+            )
         except Exception as e:
-            logging.error(f"Failed to analyze dataset quality for {dataset_link}: {e}")
-        
+            logging.error(
+                f"Failed to analyze dataset quality for "
+                f"{dataset_link}: {e}"
+                )
+
         return {
             'dataset_quality': 0.0,
             'dataset_quality_latency': 0,
         }
-    
+
     def _calculate_dataset_and_code_score(
-        self, 
-        code_link: Optional[str], 
-        dataset_link: Optional[str], 
+        self,
+        code_link: Optional[str],
+        dataset_link: Optional[str],
         repo_metrics: Dict[str, Any]
     ) -> float:
         """
-        Calculates a combined dataset and code score based on availability and quality.
-        
-        The scoring logic prioritizes entries with both code and dataset, applying
-        penalties for missing components while still providing meaningful scores
+        Calculates a combined dataset and code score based on
+        availability and quality.
+
+        The scoring logic prioritizes entries with both code and
+        dataset, applying penalties for missing components
+        while still providing meaningful scores
         for partial entries.
-        
+
         Args:
             code_link: Optional code repository URL
-            dataset_link: Optional dataset URL  
+            dataset_link: Optional dataset URL
             repo_metrics: Previously computed repository metrics
-            
+
         Returns:
             Combined score between 0.0 and 1.0
         """
         code_score = 0.0
         dataset_score = 0.0
-        
+
         # Code score: based on presence and quality
         if code_link and is_code_repository(code_link):
             code_quality = repo_metrics.get('code_quality', 0.0)
             license_score = repo_metrics.get('license', 0.0)
             code_score = (code_quality * 0.6 + license_score * 0.4)
-        
+
         # Dataset score: based on presence and quality
         if dataset_link:
             dataset_quality = repo_metrics.get('dataset_quality', 0.0)
             dataset_score = dataset_quality
-        
+
         # Combined score: weighted average (can be adjusted)
         if code_link and dataset_link:
             return (code_score * 0.6 + dataset_score * 0.4)
@@ -417,8 +439,9 @@ class MetricsCalculator:
 
     def _get_default_metrics(self) -> Dict[str, Any]:
         """
-        Returns a default metric structure with zero values when analysis fails.
-        
+        Returns a default metric structure with zero values
+        when analysis fails.
+
         Returns:
             Dictionary with default metric values and latencies
         """
