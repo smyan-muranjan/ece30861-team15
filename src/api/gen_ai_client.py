@@ -15,7 +15,7 @@ class GenAIClient:
             "Content-Type": "application/json"
         }
 
-    async def chat(self, message: str, model: str = "llama3.1:latest") -> str:
+    async def chat(self, message: str, model: str = "llama3.3:70b") -> str:
         body = {
             "model": model,
             "messages": [
@@ -43,13 +43,24 @@ class GenAIClient:
                     raise Exception(f"Error: {response.status}, {error}")
 
     async def get_performance_claims(self, readme_text: str) -> dict:
-        with open("src/api/performance_claims_ai_prompt.txt", "r") as f:
-            prompt = f.read()
-        prompt += readme_text
-        response = await self.chat(prompt)
+        # Stage 1: Extract relevant information
+        with open(
+            "src/api/performance_claims_extraction_prompt.txt", "r"
+        ) as f:
+            extraction_prompt = f.read()
+        extraction_prompt += readme_text
+        extraction_response = await self.chat(extraction_prompt)
+
+        # Stage 2: Convert to JSON format
+        with open(
+            "src/api/performance_claims_conversion_prompt.txt", "r"
+        ) as f:
+            conversion_prompt = f.read()
+        conversion_prompt += "\n" + extraction_response
+        json_response = await self.chat(conversion_prompt)
 
         # Extract JSON object from response (handles markdown code blocks)
-        match = re.search(r'\{[^}]*\}', response)
+        match = re.search(r'\{[^}]*\}', json_response)
         if match:
             json_str = match.group(0)
             try:
@@ -61,10 +72,11 @@ class GenAIClient:
         else:
             # Try parsing the entire response as fallback
             try:
-                return json.loads(response)
+                return json.loads(json_response)
             except json.JSONDecodeError as e:
                 raise Exception(
-                    f"Failed to parse GenAI response as JSON: {response}"
+                    f"Failed to parse GenAI response as JSON: {json_response}."
+                    f"Extraction response was: {extraction_response}"
                 ) from e
 
     async def get_readme_clarity(self, readme_text: str) -> float:

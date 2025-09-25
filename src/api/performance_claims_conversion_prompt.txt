@@ -1,0 +1,8 @@
+Convert the extracted information below into a JSON object with exactly these fields:
+- has_metrics: 1 if any performance metrics were found, 0 otherwise
+- mentions_benchmarks: 1 if any benchmarks were found, 0 otherwise
+
+You must respond with ONLY valid JSON in this exact format:
+{"has_metrics": 0, "mentions_benchmarks": 0}
+
+Extracted information:

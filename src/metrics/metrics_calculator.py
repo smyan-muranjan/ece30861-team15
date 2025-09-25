@@ -247,8 +247,8 @@ class MetricsCalculator:
                                      license_task,
                                      ramp_up_task,
                                      dataset_quality_task,
-                                     size_task,
-                                     performance_claims_task)
+                                     performance_claims_task,
+                                     size_task)
 
             return {
                 'bus_factor': bus_factor_score,

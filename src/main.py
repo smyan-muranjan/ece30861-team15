@@ -151,7 +151,7 @@ async def analyze_entry(
         ),
         "license": local_metrics.get('license', 0.0),
         "license_latency": local_metrics.get('license_latency', 0),
-        "size_score": local_metrics.get('size_score', {}),
+        "size_score": local_metrics.get('size_score', 0.0),
         "size_score_latency": local_metrics.get('size_score_latency', 0),
         "dataset_and_code_score": local_metrics.get(
             'dataset_and_code_score', 0.0
