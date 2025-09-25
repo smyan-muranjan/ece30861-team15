@@ -10,10 +10,10 @@ from src.metrics.metrics_calculator import MetricsCalculator
 def mock_git_client():
     """
     Fixture to create a properly configured mock GitClient.
-    It patches the GitClient inside the local_metrics module,
+    It patches the GitClient inside the metrics_calculator module,
     ensuring our calculator uses the mock.
     """
-    with patch('src.metrics.local_metrics.GitClient') as MockGitClient:
+    with patch('src.metrics.metrics_calculator.GitClient') as MockGitClient:
         mock_instance = MockGitClient.return_value
         yield mock_instance
 

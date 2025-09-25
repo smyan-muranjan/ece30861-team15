@@ -13,18 +13,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_parse_url_file_success():
-    """Tests that the URL parser correctly reads a valid file."""
+    """Tests that the URL parser correctly reads a valid file with the new format."""
     file_path = "test_urls.txt"
-    urls_to_write = [
-        "https://github.com/test/repo1",
-        "https://huggingface.co/model2"
+    entries_to_write = [
+        "https://github.com/test/repo1, https://huggingface.co/datasets/test, https://huggingface.co/model1",
+        ",,https://huggingface.co/model2"
     ]
     with open(file_path, "w") as f:
-        for url in urls_to_write:
-            f.write(url + "\n")
+        for entry in entries_to_write:
+            f.write(entry + "\n")
 
-    parsed_urls = main.parse_url_file(file_path)
-    assert parsed_urls == urls_to_write
+    parsed_entries = main.parse_url_file(file_path)
+    expected = [
+        ("https://github.com/test/repo1", "https://huggingface.co/datasets/test", "https://huggingface.co/model1"),
+        (None, None, "https://huggingface.co/model2")
+    ]
+    assert parsed_entries == expected
 
     os.remove(file_path)
 
@@ -78,7 +82,7 @@ def test_parse_url_file_not_found():
 
 
 @pytest.mark.asyncio
-@patch('src.metrics.local_metrics.LocalMetricsCalculator.analyze_repository')
+@patch('src.metrics.metrics_calculator.MetricsCalculator.analyze_repository')
 async def test_analyze_url(mock_analyze_repository):
     """Tests the async analyze_url function."""
     # Mock the return value of the underlying analysis

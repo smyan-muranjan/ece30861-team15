@@ -8,10 +8,13 @@ from src.metrics.metric import Metric
 class DatasetQualityMetric(Metric):
     LIKES_WEIGHT = 0.5
     DOWNLOADS_WEIGHT = 0.5
+    
+    def __init__(self, hf_client: HuggingFaceClient = None):
+        self.hf_client = hf_client or HuggingFaceClient()
 
     async def calculate(self, metric_input: Any) -> float:
         assert isinstance(metric_input, DatasetQualityInput)
-        dataset_stats = HuggingFaceClient().get_dataset_info(
+        dataset_stats = self.hf_client.get_dataset_info(
             metric_input.repo_id
             )
         normalized_likes = dataset_stats.get("normalized_likes", 0)
