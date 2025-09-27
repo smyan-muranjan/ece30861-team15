@@ -7,8 +7,6 @@ from src.metrics.performance_claims_metric import PerformanceClaimsMetric
 
 
 class TestPerformanceClaimsMetric:
-    def setup_method(self):
-        self.metric = PerformanceClaimsMetric()
 
     @pytest.mark.asyncio
     async def test_calculate_with_valid_data(self):
@@ -24,13 +22,14 @@ class TestPerformanceClaimsMetric:
                 "src.metrics.performance_claims_metric.GenAIClient",
                 return_value=mock_gen_ai_client
                 ):
+            metric = PerformanceClaimsMetric()
             # Create test data
             metric_input = PerformanceInput(
                 readme_text="This is a README with benchmarks and metrics."
                 )
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -53,11 +52,12 @@ class TestPerformanceClaimsMetric:
                 "src.metrics.performance_claims_metric.GenAIClient",
                 return_value=mock_gen_ai_client
                 ):
+            metric = PerformanceClaimsMetric()
             # Create test data
             metric_input = PerformanceInput(readme_text="")
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = 0.0
@@ -81,9 +81,10 @@ class TestPerformanceClaimsMetric:
             metric_input = PerformanceInput(
                 readme_text="This README mentions benchmarks but no metrics."
                 )
+            metric = PerformanceClaimsMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -105,9 +106,10 @@ class TestPerformanceClaimsMetric:
                 ):
             # Create test data
             metric_input = PerformanceInput(readme_text="Some README text")
+            metric = PerformanceClaimsMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result (should default to 0 for missing keys)
             expected_result = 0.0
@@ -116,5 +118,6 @@ class TestPerformanceClaimsMetric:
     @pytest.mark.asyncio
     async def test_calculate_invalid_type(self):
         # Test with invalid input type
+        metric = PerformanceClaimsMetric()
         with pytest.raises(AssertionError):
-            await self.metric.calculate({"readme_text": "invalid"})
+            await metric.calculate({"readme_text": "invalid"})

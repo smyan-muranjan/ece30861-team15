@@ -77,24 +77,41 @@ class TestGenAIClient:
     @patch("builtins.open", create=True)
     @pytest.mark.asyncio
     async def test_get_performance_claims(self, mock_open, mock_post):
-        # Mock file reading
+        # Mock file reading - need to handle two different files
         mock_file = MagicMock()
         mock_file.read.return_value = "Test prompt: "
         mock_open.return_value.__enter__.return_value = mock_file
 
-        # Mock HTTP response - return valid JSON string that will be parsed
+        # Mock HTTP responses - two calls for two-stage approach
         expected_dict = {
             "mentions_benchmarks": 0.8,
             "has_metrics": 0.6
         }
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
+
+        # First response (extraction)
+        extraction_response = "METRICS FOUND: accuracy 92%\n" \
+                              "BENCHMARKS FOUND: SQuAD"
+        mock_response1 = AsyncMock()
+        mock_response1.status = 200
+        mock_response1.json = AsyncMock(return_value={
+            "choices": [
+                {"message": {"content": extraction_response}}
+            ]
+        })
+
+        # Second response (conversion to JSON)
+        mock_response2 = AsyncMock()
+        mock_response2.status = 200
+        mock_response2.json = AsyncMock(return_value={
             "choices": [
                 {"message": {"content": json.dumps(expected_dict)}}
             ]
         })
-        mock_post.return_value.__aenter__.return_value = mock_response
+
+        mock_post.return_value.__aenter__.side_effect = [
+            mock_response1,
+            mock_response2,
+        ]
 
         client = GenAIClient()
         result = await client.get_performance_claims("README content")
@@ -103,13 +120,17 @@ class TestGenAIClient:
         assert result == expected_dict
         assert isinstance(result, dict)
 
-        # Verify file was opened correctly
-        mock_open.assert_called_once_with(
-            "src/api/performance_claims_ai_prompt.txt", "r"
+        # Verify both files were opened
+        assert mock_open.call_count == 2
+        mock_open.assert_any_call(
+            "src/api/performance_claims_extraction_prompt.txt", "r"
+        )
+        mock_open.assert_any_call(
+            "src/api/performance_claims_conversion_prompt.txt", "r"
         )
 
-        # Verify HTTP call was made
-        mock_post.assert_called_once()
+        # Verify HTTP calls were made twice
+        assert mock_post.call_count == 2
 
     @patch.dict(os.environ, {"GENAI_API_KEY": "test_key"})
     @patch("aiohttp.ClientSession.post")

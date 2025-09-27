@@ -30,7 +30,7 @@ case "$1" in
     *)
         # If the argument is a file, process it. Otherwise, show usage.
         if [ -f "$1" ]; then
-            python3 "$PROJECT_ROOT/src/main.py" "$1"
+            cd "$PROJECT_ROOT" && python3 -m src.main "$1"
         else
             echo "Usage:"
             echo "./run install                # Install dependencies"

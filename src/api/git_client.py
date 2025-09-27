@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -36,6 +37,33 @@ class GitClient:
         """Initialize Git client."""
         self.temp_dirs: List[str] = []  # Track temp dirs for cleanup
 
+    def _normalize_git_url(self, url: str) -> str:
+        """
+        Normalize a git URL by removing web interface paths.
+
+        Args:
+            url: Repository URL that may include web interface paths
+
+        Returns:
+            Clean URL suitable for git clone operations
+        """
+        # Remove common web interface paths
+        patterns_to_remove = [
+            r'/tree/[^/]+/?$',      # /tree/main, /tree/master, etc.
+            r'/blob/[^/]+/.*$',     # /blob/main/file.py, etc.
+            r'/commits?/[^/]+/?$',  # /commit/abc123, /commits/main
+            r'/releases?/?.*$',     # /releases, /release/v1.0
+            r'/issues?/?.*$',       # /issues, /issues/1
+            r'/pull/?.*$',          # /pull/1
+            r'/wiki/?.*$',          # /wiki, /wiki/page
+        ]
+
+        normalized_url = url.rstrip('/')
+        for pattern in patterns_to_remove:
+            normalized_url = re.sub(pattern, '', normalized_url)
+
+        return normalized_url
+
     def clone_repository(self, url: str) -> Optional[str]:
         """
         Clone a repository to a temporary directory.
@@ -43,14 +71,17 @@ class GitClient:
         :return: Path to cloned repository, or None if cloning failed
         """
         try:
+            # Normalize URL for git cloning by removing web interface paths
+            normalized_url = self._normalize_git_url(url)
+
             # Create temporary directory
             temp_dir = tempfile.mkdtemp(prefix="model_analysis_")
             self.temp_dirs.append(temp_dir)
 
-            logging.info(f"Cloning repository: {url}")
+            logging.info(f"Cloning repository: {normalized_url}")
 
             # Clone the repository
-            Repo.clone_from(url, temp_dir)
+            Repo.clone_from(normalized_url, temp_dir)
             logging.info(f"Successfully cloned to: {temp_dir}")
 
             return temp_dir

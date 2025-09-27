@@ -11,4 +11,8 @@ Return ONLY a **single floating-point number between 0 and 1**, where:
 * `1.0` = very clear, comprehensive, and easy to follow
 * `0.0` = no usable instructions or very unclear
 DO NOT OUTPUT ANYTHING ELSE OTHER THAN THE NUMBER.
+
+Here is an example of the expected output:
+0.85
+
 Here is the README content:

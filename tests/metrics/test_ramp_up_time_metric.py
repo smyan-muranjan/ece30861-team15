@@ -7,8 +7,6 @@ from src.metrics.ramp_up_time_metric import RampUpTimeMetric
 
 
 class TestRampUpTimeMetric:
-    def setup_method(self):
-        self.metric = RampUpTimeMetric()
 
     @pytest.mark.asyncio
     async def test_calculate_with_perfect_score(self):
@@ -37,9 +35,10 @@ class TestRampUpTimeMetric:
                 readme_text="Excellent README with clear instructions",
                 repo_path="/path/to/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -85,9 +84,10 @@ class TestRampUpTimeMetric:
                 readme_text="",
                 repo_path="/path/to/empty/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = 0.0
@@ -120,9 +120,10 @@ class TestRampUpTimeMetric:
                 readme_text="Good README but could be clearer",
                 repo_path="/path/to/partial/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -162,9 +163,10 @@ class TestRampUpTimeMetric:
                 readme_text="Clear README without dependencies or examples",
                 repo_path="/path/to/readme-only/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result (only README weight contributes)
             expected_result = RampUpTimeMetric.LLM_README_WEIGHT * 0.8
@@ -199,9 +201,10 @@ class TestRampUpTimeMetric:
                 readme_text="Poor README",
                 repo_path="/path/to/well-structured/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -237,9 +240,10 @@ class TestRampUpTimeMetric:
                 readme_text="README with missing repo data",
                 repo_path="/path/to/incomplete/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result (should default to False for missing keys)
             expected_result = RampUpTimeMetric.LLM_README_WEIGHT * 0.5
@@ -273,9 +277,10 @@ class TestRampUpTimeMetric:
                 readme_text="README with partial repo data",
                 repo_path="/path/to/partial/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (
@@ -291,22 +296,25 @@ class TestRampUpTimeMetric:
     @pytest.mark.asyncio
     async def test_calculate_invalid_input_type(self):
         """Test calculate method with invalid input type."""
+        metric = RampUpTimeMetric()
         with pytest.raises(AssertionError):
-            await self.metric.calculate(
+            await metric.calculate(
                 {"readme_text": "invalid", "repo_path": "/path"}
             )
 
     @pytest.mark.asyncio
     async def test_calculate_none_input(self):
         """Test calculate method with None input."""
+        metric = RampUpTimeMetric()
         with pytest.raises(AssertionError):
-            await self.metric.calculate(None)
+            await metric.calculate(None)
 
     @pytest.mark.asyncio
     async def test_calculate_string_input(self):
         """Test calculate method with string input."""
+        metric = RampUpTimeMetric()
         with pytest.raises(AssertionError):
-            await self.metric.calculate("invalid input")
+            await metric.calculate("invalid input")
 
     @pytest.mark.asyncio
     async def test_weight_constants_sum_to_one(self):
@@ -354,10 +362,11 @@ class TestRampUpTimeMetric:
                 readme_text="README text",
                 repo_path="/path/to/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method and expect exception
             with pytest.raises(Exception, match="GenAI API error"):
-                await self.metric.calculate(metric_input)
+                await metric.calculate(metric_input)
 
     @pytest.mark.asyncio
     async def test_calculate_with_git_client_exception(self):
@@ -385,10 +394,11 @@ class TestRampUpTimeMetric:
                 readme_text="README text",
                 repo_path="/path/to/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method and expect exception
             with pytest.raises(Exception, match="Git analysis error"):
-                await self.metric.calculate(metric_input)
+                await metric.calculate(metric_input)
 
     @pytest.mark.asyncio
     async def test_calculate_with_edge_case_scores(self):
@@ -417,9 +427,10 @@ class TestRampUpTimeMetric:
                 readme_text="Very poor README",
                 repo_path="/path/to/repo"
             )
+            metric = RampUpTimeMetric()
 
             # Call the calculate method
-            result = await self.metric.calculate(metric_input)
+            result = await metric.calculate(metric_input)
 
             # Assert the result
             expected_result = (

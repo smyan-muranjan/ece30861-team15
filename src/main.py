@@ -5,9 +5,9 @@ import os
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
-from src.metrics.local_metrics import LocalMetricsCalculator
+from src.metrics.metrics_calculator import MetricsCalculator
 
 # --- Logging setup ---
 # Adheres to the LOG_FILE and LOG_LEVEL environment variable
@@ -36,14 +36,46 @@ else:
 # --- End of logging setup ---
 
 
-def parse_url_file(file_path: str) -> List[str]:
-    """Reads a file and returns a list of URLs, stripping whitespace."""
+def parse_url_file(file_path: str) -> List[
+    Tuple[Optional[str], Optional[str], str]
+]:
+    """
+    Reads a file and returns a list of tuples containing
+    (code_link, dataset_link, model_link).
+    Format: code_link, dataset_link, model_link per line.
+    Code and dataset links can be empty.
+    """
     logging.info(f"Reading URLs from: {file_path}")
     try:
         with open(file_path, "r", encoding='utf-8') as f:
-            urls = [line.strip() for line in f if line.strip()]
-        logging.info(f"Found {len(urls)} URLs.")
-        return urls
+            entries = []
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+
+                parts = [part.strip() for part in line.split(',')]
+                if len(parts) != 3:
+                    logging.warning(
+                        "Line %d has %d parts, expected 3. Skipping.",
+                        line_num, len(parts)
+                    )
+                    continue
+
+                code_link = parts[0] if parts[0] else None
+                dataset_link = parts[1] if parts[1] else None
+                model_link = parts[2] if parts[2] else None
+
+                if not model_link:
+                    logging.warning(
+                        "Line %d has no model link. Skipping.", line_num
+                    )
+                    continue
+
+                entries.append((code_link, dataset_link, model_link))
+
+        logging.info(f"Found {len(entries)} valid entries.")
+        return entries
     except FileNotFoundError:
         # Prints a user-friendly error message and exits as
         # required [cite: 422]
@@ -77,16 +109,22 @@ def calculate_net_score(metrics: Dict[str, Any]) -> float:
     return min(1.0, max(0.0, net_score))
 
 
-async def analyze_url(
-    url: str, process_pool: ProcessPoolExecutor
+async def analyze_entry(
+    entry: Tuple[Optional[str], Optional[str], str],
+    process_pool: ProcessPoolExecutor,
+    encountered_datasets: set
 ) -> Dict[str, Any]:
     """
-    Analyzes a single URL, orchestrates metric calculation, and
-    returns the final scorecard.
+    Analyzes a single entry containing code, dataset, and model links,
+    orchestrates metric calculation, and returns the final scorecard.
     """
+    code_link, dataset_link, model_link = entry
     start_time = time.time()
-    calculator = LocalMetricsCalculator(process_pool)
-    local_metrics = await calculator.analyze_repository(url)
+
+    calculator = MetricsCalculator(process_pool)
+    local_metrics = await calculator.analyze_entry(
+        code_link, dataset_link, model_link, encountered_datasets
+    )
 
     net_score = calculate_net_score(local_metrics)
     total_latency_ms = int((time.time() - start_time) * 1000)
@@ -94,48 +132,68 @@ async def analyze_url(
     # The output format strictly follows Table 1 in
     # the project specification [cite: 407, 435]
     scorecard: Dict[str, Any] = {
-        "name": url.split("/")[-1],
+        "name": model_link.split("/")[-1],
         "category": "MODEL",
-        "url": url,
+        "url": model_link,
+        "code_url": code_link,
+        "dataset_url": dataset_link,
         "net_score": round(net_score, 2),
         "net_score_latency": total_latency_ms,
         "ramp_up_time": local_metrics.get('ramp_up_time', 0.0),
-        "ramp_up_time_latency": local_metrics.get('ramp_up_time_latency', 0),
+        "ramp_up_time_latency": local_metrics.get(
+            'ramp_up_time_latency', 0
+        ),
         "bus_factor": local_metrics.get('bus_factor', 0.0),
         "bus_factor_latency": local_metrics.get('bus_factor_latency', 0),
-        "performance_claims": 0.0,  # Placeholder until LLM part is built
-        "performance_claims_latency": 0,
+        "performance_claims": local_metrics.get('performance_claims', 0.0),
+        "performance_claims_latency": local_metrics.get(
+            'performance_claims_latency', 0
+        ),
         "license": local_metrics.get('license', 0.0),
         "license_latency": local_metrics.get('license_latency', 0),
-        "size_score": local_metrics.get('size_score', {}),
+        "size_score": local_metrics.get('size_score', 0.0),
         "size_score_latency": local_metrics.get('size_score_latency', 0),
-        "dataset_and_code_score": 0.0,  # Placeholder
-        "dataset_and_code_score_latency": 0,
-        "dataset_quality": 0.0,  # Placeholder
-        "dataset_quality_latency": 0,
+        "dataset_and_code_score": local_metrics.get(
+            'dataset_and_code_score', 0.0
+        ),
+        "dataset_and_code_score_latency": local_metrics.get(
+            'dataset_and_code_score_latency', 0
+        ),
+        "dataset_quality": local_metrics.get('dataset_quality', 0.0),
+        "dataset_quality_latency": local_metrics.get(
+            'dataset_quality_latency', 0
+        ),
         "code_quality": local_metrics.get('code_quality', 0.0),
         "code_quality_latency": local_metrics.get('code_quality_latency', 0),
     }
     return scorecard
 
 
-async def process_urls(urls: List[str]) -> None:
+async def process_entries(
+    entries: List[Tuple[Optional[str], Optional[str], str]]
+) -> None:
     """
-    Processes each URL concurrently using an advanced hybrid model.
+    Processes each entry concurrently using an advanced hybrid model.
     """
-    logging.info(f"Processing {len(urls)} URLs with advanced concurrency.")
+    logging.info(
+        "Processing %d entries with advanced concurrency.", len(entries)
+    )
     # Manages workers based on available CPU cores,
     # as requested by Sarah [cite: 386]
     max_workers = os.cpu_count() or 4
-    logging.info(f"Using {max_workers} worker processes.")
+    logging.info("Using %d worker processes.", max_workers)
+
+    # Track encountered datasets to handle shared datasets
+    encountered_datasets: set[str] = set()
 
     with ProcessPoolExecutor(max_workers=max_workers) as process_pool:
-        tasks = [analyze_url(url, process_pool) for url in urls]
+        tasks = [analyze_entry(entry, process_pool, encountered_datasets)
+                 for entry in entries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in results:
             if isinstance(result, Exception):
-                logging.error(f"An analysis task failed: {result}")
+                logging.error("An analysis task failed: %s", result)
             else:
                 # Prints output to stdout in NDJSON format [cite: 407]
                 print(json.dumps(result))
@@ -149,9 +207,9 @@ def main():
         sys.exit(1)
 
     url_file = sys.argv[1]
-    urls = parse_url_file(url_file)
-    if urls:
-        asyncio.run(process_urls(urls))
+    entries = parse_url_file(url_file)
+    if entries:
+        asyncio.run(process_entries(entries))
 
 
 if __name__ == "__main__":
