@@ -398,9 +398,10 @@ class MetricsCalculator:
     ) -> float:
         """
         Calculates a combined dataset and code score based on availability.
-        
-        According to project plan: Score = (0.6 * HasDatasetInfo) + (0.4 * HasTrainingCode)
-        
+
+        According to project plan: Score =
+                (0.6 * HasDatasetInfo) + (0.4 * HasTrainingCode)
+
         Args:
             code_link: Optional code repository URL
             dataset_link: Optional dataset URL
@@ -411,10 +412,11 @@ class MetricsCalculator:
         """
         # Check for dataset information (0 or 1)
         has_dataset_info = 1.0 if dataset_link else 0.0
-        
+
         # Check for training code (0 or 1)
-        has_training_code = 1.0 if (code_link and is_code_repository(code_link)) else 0.0
-        
+        has_training_code = \
+            1.0 if (code_link and is_code_repository(code_link)) else 0.0
+
         # Apply the formula from project plan
         return (0.6 * has_dataset_info) + (0.4 * has_training_code)
 

@@ -15,27 +15,27 @@ class BusFactorMetric(Metric):
 
         commit_stats = self.git_client.analyze_commits(metric_input.repo_url)
         if not commit_stats or commit_stats.total_commits == 0:
-            logging.warning(f"Bus factor: No commits found for {metric_input.repo_url}")
-            # For old repositories with no recent commits, give a moderate score
-            # This handles cases like BERT which is mature and stable
-            return 0.4
+            logging.warning(f"Bus factor: \
+                            No commits found for {metric_input.repo_url}")
+            return 0.0  # No commits means minimum bus factor
 
-        logging.info(f"Bus factor: Found {commit_stats.total_commits} commits, {len(commit_stats.contributors)} contributors")
-        
-        # Handle edge cases better
-        if len(commit_stats.contributors) == 1:
-            # Single contributor gets a moderate score instead of 0
-            bus_factor = 0.3
-        elif len(commit_stats.contributors) == 2:
-            # Two contributors get a good score
-            bus_factor = 0.7
+        logging.info(
+            f"Bus factor: Found {commit_stats.total_commits} commits, \
+                {len(commit_stats.contributors)} contributors")
+
+        # Calculate bus factor based on contributor concentration
+        concentration = sum(
+            (count / commit_stats.total_commits) ** 2
+            for count in commit_stats.contributors.values()
+        )
+
+        # For exactly two equal contributors, set bus_factor to 0.5
+        if (len(commit_stats.contributors) == 2 and
+                all(count == commit_stats.total_commits / 2
+                    for count in commit_stats.contributors.values())):
+            bus_factor = 0.5
         else:
-            # Normal calculation for 3+ contributors
-            concentration = sum(
-                (count / commit_stats.total_commits) ** 2
-                for count in commit_stats.contributors.values()
-            )
             bus_factor = max(0.0, 1.0 - concentration)
-        
+
         logging.info(f"Bus factor calculated: {bus_factor}")
         return bus_factor

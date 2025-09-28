@@ -32,12 +32,17 @@ class LicenseMetric(Metric):
 
         readme_content = self.git_client.read_readme(metric_input.repo_url)
         if not readme_content:
-            logging.warning(f"License: No README found for {metric_input.repo_url}")
+            logging.warning(
+                f"License: No README found for {metric_input.repo_url}"
+                )
             return 0.0
 
         license_text = self._extract_license_from_readme(readme_content)
         if not license_text:
-            logging.warning(f"License: No license text found in README for {metric_input.repo_url}")
+            logging.warning(
+                f"License: No license text found \
+                    in README for {metric_input.repo_url}"
+                )
             return 0.0
 
         score = self._score_license(license_text)
@@ -90,14 +95,16 @@ class LicenseMetric(Metric):
             # Look for specific license patterns that indicate actual licenses
             # Avoid generic mentions of "license" that don't specify a type
             if any(license in line_lower for license in [
-                'mit license', 'apache 2.0', 'apache license', 'gpl', 'gpl-2', 'gpl-3',
-                'bsd license', 'bsd-2', 'bsd-3', 'lgpl', 'mpl', 'eclipse'
+                'mit license', 'apache 2.0', 'apache license',
+                'gpl', 'gpl-2', 'gpl-3',
+                'bsd license', 'bsd-2', 'bsd-3',
+                'lgpl', 'mpl', 'eclipse'
             ]):
                 license_mentions.append(line.strip())
-        
+
         if license_mentions:
             return ' '.join(license_mentions[:3])  # Take first 3 mentions
-        
+
         return None
 
     def _score_license(self, license_text: str) -> float:
