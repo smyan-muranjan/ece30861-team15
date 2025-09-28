@@ -121,7 +121,8 @@ async def analyze_entry(
     code_link, dataset_link, model_link = entry
     start_time = time.time()
 
-    calculator = MetricsCalculator(process_pool)
+    github_token = os.environ.get("GITHUB_TOKEN")
+    calculator = MetricsCalculator(process_pool, github_token)
     local_metrics = await calculator.analyze_entry(
         code_link, dataset_link, model_link, encountered_datasets
     )
