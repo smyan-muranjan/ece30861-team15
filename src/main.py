@@ -11,28 +11,31 @@ from src.metrics.metrics_calculator import MetricsCalculator
 
 # --- Logging setup ---
 # Adheres to the LOG_FILE and LOG_LEVEL environment variable
-# requirements [cite: 424]
+# requirements
 LOG_LEVEL_STR = os.environ.get("LOG_LEVEL", "0")
 LOG_FILE = os.environ.get("LOG_FILE")
 
 log_level_map = {
-    "0": logging.WARNING, "1": logging.INFO, "2": logging.DEBUG
+    "1": logging.INFO, "2": logging.DEBUG
 }
-log_level = log_level_map.get(LOG_LEVEL_STR, logging.WARNING)
+log_level = log_level_map.get(LOG_LEVEL_STR)
 
 # Configure logging to file or stdout based on environment
-if LOG_FILE:
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        filename=LOG_FILE,
-    )
+if LOG_LEVEL_STR != "0" and log_level:
+    if LOG_FILE:
+        logging.basicConfig(
+            level=log_level,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            filename=LOG_FILE,
+        )
+    else:
+        logging.basicConfig(
+            level=log_level,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            stream=sys.stdout,
+        )
 else:
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        stream=sys.stdout,
-    )
+    logging.disable(logging.CRITICAL)
 # --- End of logging setup ---
 
 
@@ -78,7 +81,7 @@ def parse_url_file(file_path: str) -> List[
         return entries
     except FileNotFoundError:
         # Prints a user-friendly error message and exits as
-        # required [cite: 422]
+        # required
         error_msg = f"Error: URL file not found at '{file_path}'."
         logging.error(error_msg)
         print(error_msg + " Please check the path.", file=sys.stderr)
@@ -105,7 +108,7 @@ def calculate_net_score(metrics: Dict[str, Any]) -> float:
         metrics.get(metric, 0.0) * weight
         for metric, weight in weights.items()
     )
-    # The score must be in the range [0, 1] [cite: 408]
+    # The score must be in the range [0, 1]
     return min(1.0, max(0.0, net_score))
 
 
@@ -131,7 +134,7 @@ async def analyze_entry(
     total_latency_ms = int((time.time() - start_time) * 1000)
 
     # The output format strictly follows Table 1 in
-    # the project specification [cite: 407, 435]
+    # the project specification
     scorecard: Dict[str, Any] = {
         "name": model_link.split("/")[-1],
         "category": "MODEL",
@@ -177,7 +180,7 @@ async def process_entries(
         "Processing %d entries with advanced concurrency.", len(entries)
     )
     # Manages workers based on available CPU cores,
-    # as requested by Sarah [cite: 386]
+    # as requested by Sarah
     max_workers = os.cpu_count() or 4
     logging.info("Using %d worker processes.", max_workers)
 
@@ -220,13 +223,13 @@ async def process_entries(
                 }
                 print(json.dumps(default_scorecard))
             else:
-                # Prints output to stdout in NDJSON format [cite: 407]
+                # Prints output to stdout in NDJSON format
                 print(json.dumps(result))
 
 
 def main():
     """Main entry point of the application."""
-    # Handles the `./run URL_FILE` invocation [cite: 399]
+    # Handles the `./run URL_FILE` invocation
     if len(sys.argv) != 2:
         print("Usage: python -m src.main <URL_FILE>", file=sys.stderr)
         sys.exit(1)
