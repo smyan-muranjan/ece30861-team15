@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -27,15 +28,6 @@ class CodeQualityStats:
     code_quality_score: float
 
 
-@dataclass
-class RampUpStats:
-    """Statistics about ramp-up time."""
-    has_examples: bool
-    has_dependencies: bool
-    readme_quality: float
-    ramp_up_score: float
-
-
 class GitClient:
     """
     Client for cloning and analyzing Git repositories.
@@ -45,6 +37,33 @@ class GitClient:
         """Initialize Git client."""
         self.temp_dirs: List[str] = []  # Track temp dirs for cleanup
 
+    def _normalize_git_url(self, url: str) -> str:
+        """
+        Normalize a git URL by removing web interface paths.
+
+        Args:
+            url: Repository URL that may include web interface paths
+
+        Returns:
+            Clean URL suitable for git clone operations
+        """
+        # Remove common web interface paths
+        patterns_to_remove = [
+            r'/tree/[^/]+/?$',      # /tree/main, /tree/master, etc.
+            r'/blob/[^/]+/.*$',     # /blob/main/file.py, etc.
+            r'/commits?/[^/]+/?$',  # /commit/abc123, /commits/main
+            r'/releases?/?.*$',     # /releases, /release/v1.0
+            r'/issues?/?.*$',       # /issues, /issues/1
+            r'/pull/?.*$',          # /pull/1
+            r'/wiki/?.*$',          # /wiki, /wiki/page
+        ]
+
+        normalized_url = url.rstrip('/')
+        for pattern in patterns_to_remove:
+            normalized_url = re.sub(pattern, '', normalized_url)
+
+        return normalized_url
+
     def clone_repository(self, url: str) -> Optional[str]:
         """
         Clone a repository to a temporary directory.
@@ -52,14 +71,17 @@ class GitClient:
         :return: Path to cloned repository, or None if cloning failed
         """
         try:
+            # Normalize URL for git cloning by removing web interface paths
+            normalized_url = self._normalize_git_url(url)
+
             # Create temporary directory
             temp_dir = tempfile.mkdtemp(prefix="model_analysis_")
             self.temp_dirs.append(temp_dir)
 
-            logging.info(f"Cloning repository: {url}")
+            logging.info(f"Cloning repository: {normalized_url}")
 
             # Clone the repository
-            Repo.clone_from(url, temp_dir)
+            Repo.clone_from(normalized_url, temp_dir)
             logging.info(f"Successfully cloned to: {temp_dir}")
 
             return temp_dir
@@ -184,22 +206,14 @@ class GitClient:
                 has_tests=False, lint_errors=0, code_quality_score=0.0
             )
 
-    def analyze_ramp_up_time(self, repo_path: str) -> RampUpStats:
-        """
-        Analyze ramp-up time by checking documentation and examples.
-
-        :param repo_path: Path to local repository
-        :return: RampUpStats object
-        """
+    def analyze_ramp_up_time(self, repo_path: str) -> dict[str, bool]:
         try:
             # Check if path exists first
             if not os.path.exists(repo_path):
-                return RampUpStats(
-                    has_examples=False,
-                    has_dependencies=False,
-                    readme_quality=0.0,
-                    ramp_up_score=0.0
-                )
+                return {
+                    'has_examples': False,
+                    'has_dependencies': False,
+                }
 
             repo_path_obj = Path(repo_path)
 
@@ -220,53 +234,17 @@ class GitClient:
                 (repo_path_obj / file).exists() for file in dependency_files
             )
 
-            # Analyze README quality (in real implementation, use LLM)
-            readme_files = list(repo_path_obj.glob("README*"))
-            readme_quality = 0.0
-
-            if readme_files:
-                readme_path = readme_files[0]
-                try:
-                    with open(readme_path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-
-                    # Simple heuristics for README quality
-                    quality_indicators = [
-                        'usage' in content.lower(),
-                        'install' in content.lower(),
-                        'example' in content.lower(),
-                        'getting started' in content.lower(),
-                        len(content) > 500,  # Substantial content
-                    ]
-                    readme_quality = \
-                        sum(quality_indicators) / len(quality_indicators)
-                except Exception as e:
-                    logging.warning(f"Failed to read README: {str(e)}")
-                    readme_quality = 0.0
-
-            # Calculate ramp-up score
-            # Weight: README quality (0.6), examples (0.2), dependencies (0.2)
-            ramp_up_score = (
-                readme_quality * 0.6 +
-                (1.0 if has_examples else 0.0) * 0.2 +
-                (1.0 if has_dependencies else 0.0) * 0.2
-            )
-
-            return RampUpStats(
-                has_examples=has_examples,
-                has_dependencies=has_dependencies,
-                readme_quality=readme_quality,
-                ramp_up_score=ramp_up_score
-            )
+            return {
+                'has_examples': has_examples,
+                'has_dependencies': has_dependencies,
+            }
 
         except Exception as e:
             logging.error(f"Failed to analyze ramp-up time: {str(e)}")
-            return RampUpStats(
-                has_examples=False,
-                has_dependencies=False,
-                readme_quality=0.0,
-                ramp_up_score=0.0
-            )
+            return {
+                'has_examples': False,
+                'has_dependencies': False,
+            }
 
     def get_repository_size(self, repo_path: str) -> Dict[str, float]:
         """
@@ -314,6 +292,31 @@ class GitClient:
                 'desktop_pc': 0.0,
                 'aws_server': 0.0
             }
+
+    def read_readme(self, repo_path: str) -> Optional[str]:
+        """
+        Read the README file from a repository.
+
+        :param repo_path: Path to local repository
+        :return: README content as string, or None if not found
+        """
+        try:
+            if not os.path.exists(repo_path):
+                return None
+
+            repo_path_obj = Path(repo_path)
+            readme_files = list(repo_path_obj.glob("README*"))
+
+            if not readme_files:
+                return None
+
+            readme_path = readme_files[0]
+            with open(readme_path, 'r', encoding='utf-8') as f:
+                return f.read()
+
+        except Exception as e:
+            logging.warning(f"Failed to read README: {str(e)}")
+            return None
 
     def cleanup(self):
         """Clean up temporary directories."""

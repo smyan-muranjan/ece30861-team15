@@ -4,8 +4,8 @@ from src.metrics.metric import Metric
 
 
 class DummyMetric(Metric):
-    def calculate(self, repository_data):
-        return repository_data
+    def calculate(self, metric_input):
+        return metric_input
 
 
 class TestMetricBase(unittest.TestCase):

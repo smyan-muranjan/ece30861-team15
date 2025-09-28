@@ -1,6 +1,8 @@
 # Testing
 pytest
 pytest-cov
+multiprocess
+pytest-asyncio
 
 # Linting and Formatting
 flake8
@@ -15,3 +17,4 @@ huggingface_hub
 PyGithub
 GitPython
 requests
+aiohttp

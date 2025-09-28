@@ -10,8 +10,7 @@ from unittest.mock import MagicMock, patch
 
 from git import Repo
 
-from src.api.git_client import (CodeQualityStats, CommitStats, GitClient,
-                                RampUpStats)
+from src.api.git_client import CodeQualityStats, CommitStats, GitClient
 
 sys.path.insert(0,
                 os.path.dirname(
@@ -43,7 +42,7 @@ class TestGitClientCoverage(unittest.TestCase):
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                shutil.rmtree(path, onexc=handle_remove_readonly)
+                shutil.rmtree(path, onerror=handle_remove_readonly)
                 break
             except (PermissionError, OSError):
                 if attempt < max_retries - 1:
@@ -86,33 +85,6 @@ class TestGitClientCoverage(unittest.TestCase):
 
             self.assertIsInstance(quality_stats, CodeQualityStats)
             self.assertEqual(quality_stats.lint_errors, 0)
-
-    def test_analyze_ramp_up_time_readme_read_error(self):
-        """Test ramp-up time when README file can't be read."""
-        repo_path = tempfile.mkdtemp(prefix="test_repo_")
-        self.temp_repo_path = repo_path
-
-        # Create a README file
-        readme_file = Path(repo_path) / "README.md"
-        readme_file.write_text("# Test README")
-
-        # Mock open to raise an exception
-        with patch('builtins.open', side_effect=IOError("Permission denied")):
-            ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-
-            self.assertIsInstance(ramp_up_stats, RampUpStats)
-            self.assertEqual(ramp_up_stats.readme_quality, 0.0)
-
-    def test_analyze_ramp_up_time_no_readme(self):
-        """Test ramp-up time when no README exists."""
-        repo_path = tempfile.mkdtemp(prefix="test_repo_")
-        self.temp_repo_path = repo_path
-
-        # Don't create any README files
-        ramp_up_stats = self.git_client.analyze_ramp_up_time(repo_path)
-
-        self.assertIsInstance(ramp_up_stats, RampUpStats)
-        self.assertEqual(ramp_up_stats.readme_quality, 0.0)
 
     def test_get_repository_size_file_access_error(self):
         """Test repository size when file access fails."""
