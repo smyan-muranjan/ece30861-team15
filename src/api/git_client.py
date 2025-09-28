@@ -33,9 +33,10 @@ class GitClient:
     Client for cloning and analyzing Git repositories.
     """
 
-    def __init__(self):
+    def __init__(self, github_token: Optional[str] = None):
         """Initialize Git client."""
         self.temp_dirs: List[str] = []  # Track temp dirs for cleanup
+        self.github_token = github_token
 
     def _normalize_git_url(self, url: str) -> str:
         """

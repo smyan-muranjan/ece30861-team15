@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import Any, Optional
 
@@ -31,16 +32,21 @@ class LicenseMetric(Metric):
 
         readme_content = self.git_client.read_readme(metric_input.repo_url)
         if not readme_content:
+            logging.warning(f"License: No README found for {metric_input.repo_url}")
             return 0.0
 
         license_text = self._extract_license_from_readme(readme_content)
         if not license_text:
+            logging.warning(f"License: No license text found in README for {metric_input.repo_url}")
             return 0.0
 
-        return self._score_license(license_text)
+        score = self._score_license(license_text)
+        logging.info(f"License score: {score} for {metric_input.repo_url}")
+        return score
 
     def _extract_license_from_readme(
             self, readme_content: str) -> Optional[str]:
+        # First try to find a dedicated license section
         license_patterns = [
             r'^#+\s*license\s*$',  # # License, ## License, etc.
             r'^#+\s*licence\s*$',  # # Licence (British spelling)
@@ -58,24 +64,41 @@ class LicenseMetric(Metric):
             if license_section_start is not None:
                 break
 
-        if license_section_start is None:
-            return None
+        if license_section_start is not None:
+            license_lines: list[str] = []
+            for i in range(license_section_start + 1, len(lines)):
+                line = lines[i].strip()
 
-        license_lines: list[str] = []
-        for i in range(license_section_start + 1, len(lines)):
-            line = lines[i].strip()
+                # Stop at next heading (starts with #)
+                if line.startswith('#'):
+                    break
 
-            # Stop at next heading (starts with #)
-            if line.startswith('#'):
-                break
+                # Skip empty lines at the beginning
+                if not license_lines and not line:
+                    continue
 
-            # Skip empty lines at the beginning
-            if not license_lines and not line:
-                continue
+                license_lines.append(line)
 
-            license_lines.append(line)
+            result = ' '.join(license_lines).strip()
+            if result:
+                return result
 
-        return ' '.join(license_lines).strip()
+        # If no dedicated license section, search for specific license mentions
+        license_mentions = []
+        for line in lines:
+            line_lower = line.lower()
+            # Look for specific license patterns that indicate actual licenses
+            # Avoid generic mentions of "license" that don't specify a type
+            if any(license in line_lower for license in [
+                'mit license', 'apache 2.0', 'apache license', 'gpl', 'gpl-2', 'gpl-3',
+                'bsd license', 'bsd-2', 'bsd-3', 'lgpl', 'mpl', 'eclipse'
+            ]):
+                license_mentions.append(line.strip())
+        
+        if license_mentions:
+            return ' '.join(license_mentions[:3])  # Take first 3 mentions
+        
+        return None
 
     def _score_license(self, license_text: str) -> float:
         license_lower = license_text.lower()
