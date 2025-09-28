@@ -1,7 +1,7 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -30,6 +30,7 @@ async def test_parallelism_performance(
 
     # Mock GitClient
     mock_git_instance = MockGitClient.return_value
+
     def mock_clone(url):
         time.sleep(0.1)  # Simulate I/O delay
         return f"/tmp/{url.split('/')[-1]}"
@@ -41,7 +42,7 @@ async def test_parallelism_performance(
     mock_git_instance.analyze_code_quality.return_value = MagicMock(
         lint_errors=5, has_tests=True
     )
-    mock_git_instance.analyze_ramp_up_time.return_value = { # Changed to a dictionary
+    mock_git_instance.analyze_ramp_up_time.return_value = {
         'has_examples': True, 'has_dependencies': True
     }
     mock_git_instance.cleanup.return_value = None
