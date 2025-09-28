@@ -49,6 +49,7 @@ class GitClient:
         """
         # Remove common web interface paths
         patterns_to_remove = [
+            r'/tree/[^/]+/?$',      # /tree/main, /tree/master, etc.
             r'/blob/[^/]+/.*$',     # /blob/main/file.py, etc.
             r'/commits?/[^/]+/?$',  # /commit/abc123, /commits/main
             r'/releases?/?.*$',     # /releases, /release/v1.0
@@ -60,10 +61,6 @@ class GitClient:
         normalized_url = url.rstrip('/')
         for pattern in patterns_to_remove:
             normalized_url = re.sub(pattern, '', normalized_url)
-
-        # Special handling for /tree/ URLs to keep the branch name
-        if '/tree/' in normalized_url:
-            normalized_url = re.sub(r'/tree/.*', '', normalized_url)
 
         return normalized_url
 
@@ -83,16 +80,8 @@ class GitClient:
 
             logging.info(f"Cloning repository: {normalized_url}")
 
-            # Add authentication for GitHub URLs if a token is available
-            if self.github_token and "github.com" in normalized_url:
-                clone_url = normalized_url.replace(
-                    "https://", f"https://oauth2:{self.github_token}@"
-                )
-            else:
-                clone_url = normalized_url
-
             # Clone the repository
-            Repo.clone_from(clone_url, temp_dir)
+            Repo.clone_from(normalized_url, temp_dir)
             logging.info(f"Successfully cloned to: {temp_dir}")
 
             return temp_dir
