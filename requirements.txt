@@ -1,20 +1,21 @@
 # Testing
-pytest
-pytest-cov
-multiprocess
-pytest-asyncio
+pytest==8.1.1
+pytest-cov==4.1.0
+multiprocess==0.70.16
+pytest-asyncio==0.23.5
 
 # Linting and Formatting
-flake8
-isort
+flake8==7.0.0
+isort==5.13.2
 
 # Type Checking
-mypy
-types-requests
+mypy==1.8.0
+types-requests==2.31.0.20240218
 
 # Implementation
-huggingface_hub
-PyGithub
-GitPython
-requests
-aiohttp
+huggingface_hub==0.21.4
+PyGithub==2.2.0
+GitPython==3.1.42
+requests==2.31.0
+aiohttp==3.9.3
+urllib3<2.0 # Add this line to constrain urllib3
