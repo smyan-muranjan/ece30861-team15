@@ -133,7 +133,7 @@ class MetricsCalculator:
             process_pool: ProcessPoolExecutor for CPU-bound operations
             github_token: Optional GitHub token for API access
         """
-        self.git_client = GitClient()
+        self.git_client = GitClient(github_token)
         self.gen_ai_client = GenAIClient()
         self.hf_client = HuggingFaceClient()
         self.process_pool = process_pool
@@ -397,13 +397,10 @@ class MetricsCalculator:
         repo_metrics: Dict[str, Any]
     ) -> float:
         """
-        Calculates a combined dataset and code score based on
-        availability and quality.
+        Calculates a combined dataset and code score based on availability.
 
-        The scoring logic prioritizes entries with both code and
-        dataset, applying penalties for missing components
-        while still providing meaningful scores
-        for partial entries.
+        According to project plan: Score =
+                (0.6 * HasDatasetInfo) + (0.4 * HasTrainingCode)
 
         Args:
             code_link: Optional code repository URL
@@ -413,29 +410,15 @@ class MetricsCalculator:
         Returns:
             Combined score between 0.0 and 1.0
         """
-        code_score = 0.0
-        dataset_score = 0.0
+        # Check for dataset information (0 or 1)
+        has_dataset_info = 1.0 if dataset_link else 0.0
 
-        # Code score: based on presence and quality
-        if code_link and is_code_repository(code_link):
-            code_quality = repo_metrics.get('code_quality', 0.0)
-            license_score = repo_metrics.get('license', 0.0)
-            code_score = (code_quality * 0.6 + license_score * 0.4)
+        # Check for training code (0 or 1)
+        has_training_code = \
+            1.0 if (code_link and is_code_repository(code_link)) else 0.0
 
-        # Dataset score: based on presence and quality
-        if dataset_link:
-            dataset_quality = repo_metrics.get('dataset_quality', 0.0)
-            dataset_score = dataset_quality
-
-        # Combined score: weighted average (can be adjusted)
-        if code_link and dataset_link:
-            return (code_score * 0.6 + dataset_score * 0.4)
-        elif code_link:
-            return code_score * 0.8  # Penalty for missing dataset
-        elif dataset_link:
-            return dataset_score * 0.8  # Penalty for missing code
-        else:
-            return 0.0  # Both missing
+        # Apply the formula from project plan
+        return (0.6 * has_dataset_info) + (0.4 * has_training_code)
 
     def _get_default_metrics(self) -> Dict[str, Any]:
         """
