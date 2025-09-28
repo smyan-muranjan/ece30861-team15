@@ -135,9 +135,6 @@ async def analyze_entry(
     scorecard: Dict[str, Any] = {
         "name": model_link.split("/")[-1],
         "category": "MODEL",
-        "url": model_link,
-        "code_url": code_link,
-        "dataset_url": dataset_link,
         "net_score": round(net_score, 2),
         "net_score_latency": total_latency_ms,
         "ramp_up_time": local_metrics.get('ramp_up_time', 0.0),
@@ -152,7 +149,7 @@ async def analyze_entry(
         ),
         "license": local_metrics.get('license', 0.0),
         "license_latency": local_metrics.get('license_latency', 0),
-        "size_score": local_metrics.get('size_score', 0.0),
+        "size_score": local_metrics.get('size_score', {}),
         "size_score_latency": local_metrics.get('size_score_latency', 0),
         "dataset_and_code_score": local_metrics.get(
             'dataset_and_code_score', 0.0
@@ -192,9 +189,36 @@ async def process_entries(
                  for entry in entries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for result in results:
+        for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logging.error("An analysis task failed: %s", result)
+                # failed entries
+                entry = entries[i]
+                code_link, dataset_link, model_link = entry
+                default_scorecard = {
+                    "name": model_link.split("/")[-1]
+                    if model_link else "unknown",
+                    "category": "MODEL",
+                    "net_score": 0.0,
+                    "net_score_latency": 0,
+                    "ramp_up_time": 0.0,
+                    "ramp_up_time_latency": 0,
+                    "bus_factor": 0.0,
+                    "bus_factor_latency": 0,
+                    "performance_claims": 0.0,
+                    "performance_claims_latency": 0,
+                    "license": 0.0,
+                    "license_latency": 0,
+                    "size_score": {},
+                    "size_score_latency": 0,
+                    "dataset_and_code_score": 0.0,
+                    "dataset_and_code_score_latency": 0,
+                    "dataset_quality": 0.0,
+                    "dataset_quality_latency": 0,
+                    "code_quality": 0.0,
+                    "code_quality_latency": 0,
+                }
+                print(json.dumps(default_scorecard))
             else:
                 # Prints output to stdout in NDJSON format [cite: 407]
                 print(json.dumps(result))
