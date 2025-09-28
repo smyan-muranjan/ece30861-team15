@@ -83,8 +83,8 @@ class GitClient:
 
             logging.info(f"Cloning repository: {normalized_url}")
 
-            # Add authentication if a token is available
-            if self.github_token:
+            # Add authentication for GitHub URLs if a token is available
+            if self.github_token and "github.com" in normalized_url:
                 clone_url = normalized_url.replace(
                     "https://", f"https://oauth2:{self.github_token}@"
                 )
