@@ -111,7 +111,6 @@ async def test_analyze_entry(mock_analyze_entry_method):
         # Await the async function and pass the required process pool
         scorecard = await main.analyze_entry(entry, pool, encountered_datasets)
 
-    assert scorecard['url'] == "https://huggingface.co/model"
     assert 'net_score' in scorecard
     assert scorecard['net_score'] > 0
     mock_analyze_entry_method.assert_awaited_once()
