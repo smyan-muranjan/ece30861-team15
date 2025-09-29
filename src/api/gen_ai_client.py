@@ -50,7 +50,7 @@ class GenAIClient:
                         'documentation', 'api', 'requirements', 'dependencies',
                         'configuration']
 
-        current_section = []
+        current_section: list[str] = []
         capture_mode = None
 
         for i, line in enumerate(lines):
@@ -167,7 +167,7 @@ class GenAIClient:
     async def chat(
         self, message: str,
         model: str = "llama3.3:70b",
-        system_prompt: str = None
+        system_prompt: str | None = None
     ) -> str:
         # If no API key is available, return a default response
         if not self.has_api_key:
@@ -218,7 +218,7 @@ class GenAIClient:
         metric_keywords = [
             'accuracy', 'f1-score', 'f1 score', 'precision', 'recall',
             'auc', 'map', 'bleu', 'rouge', 'meteor', 'cider', 'spice',
-            'bert-score', 'perplexity', 'loss', 'error rate', 'top-1'
+            'bert-score', 'perplexity', 'loss', 'error rate', 'top-1',
             'top-5', 'mse', 'mae', 'r2', 'correlation',
             '%', 'percent', 'score', 'metric'
         ]
@@ -307,7 +307,7 @@ class GenAIClient:
 
         return min(1.0, score)
 
-    def _extract_json_from_response(self, response: str) -> dict:
+    def _extract_json_from_response(self, response: str) -> dict | None:
         """Extract JSON from LLM response with multiple strategies."""
         # Strategy 1: Look for JSON blocks in markdown
         json_blocks = re.findall(
@@ -365,7 +365,7 @@ class GenAIClient:
         # If all parsing fails, return None to trigger fallback
         return None
 
-    def _extract_float_from_response(self, response: str) -> float:
+    def _extract_float_from_response(self, response: str) -> float | None:
         """Extract float from LLM response with multiple strategies."""
         # Strategy 1: Direct float parsing
         try:

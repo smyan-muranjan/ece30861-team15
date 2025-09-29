@@ -587,7 +587,8 @@ class TestGetPerformanceClaims:
     async def test_get_performance_claims_success(self, mock_post, mock_file):
         """Test successful performance claims analysis."""
         # Mock the file reading for both prompt files
-        mock_file.return_value.read.return_value = "Test prompt: {processed_readme}"  # noqa: E501
+        mock_file.return_value.read.return_value = \
+            "Test prompt: {processed_readme}"
 
         mock_response = AsyncMock()
         mock_response.status = 200
