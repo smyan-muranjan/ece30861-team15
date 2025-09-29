@@ -105,11 +105,10 @@ async def test_analyze_entry(mock_analyze_entry_method):
     }
     entry = ("https://github.com/test/repo",
              None, "https://huggingface.co/model")
-    encountered_datasets = set()
 
     with ProcessPoolExecutor() as pool:
         # Await the async function and pass the required process pool
-        scorecard = await main.analyze_entry(entry, pool, encountered_datasets)
+        scorecard = await main.analyze_entry(entry, pool)
 
     assert 'net_score' in scorecard
     assert scorecard['net_score'] > 0

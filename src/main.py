@@ -153,8 +153,7 @@ def calculate_net_score(metrics: Dict[str, Any]) -> float:
 
 async def analyze_entry(
     entry: Tuple[Optional[str], Optional[str], str],
-    process_pool: ProcessPoolExecutor,
-    encountered_datasets: set
+    process_pool: ProcessPoolExecutor
 ) -> Dict[str, Any]:
     """
     Analyzes a single entry containing code, dataset, and model links,
@@ -166,7 +165,7 @@ async def analyze_entry(
     github_token = os.environ.get("GITHUB_TOKEN")
     calculator = MetricsCalculator(process_pool, github_token)
     local_metrics = await calculator.analyze_entry(
-        code_link, dataset_link, model_link, encountered_datasets
+        code_link, dataset_link, model_link
     )
 
     net_score = calculate_net_score(local_metrics)
@@ -223,11 +222,8 @@ async def process_entries(
     max_workers = os.cpu_count() or 4
     logging.info("Using %d worker processes.", max_workers)
 
-    # Track encountered datasets to handle shared datasets
-    encountered_datasets: set[str] = set()
-
     with ProcessPoolExecutor(max_workers=max_workers) as process_pool:
-        tasks = [analyze_entry(entry, process_pool, encountered_datasets)
+        tasks = [analyze_entry(entry, process_pool)
                  for entry in entries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

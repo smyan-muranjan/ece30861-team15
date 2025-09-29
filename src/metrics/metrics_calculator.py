@@ -273,21 +273,18 @@ class MetricsCalculator:
         self,
         code_link: Optional[str],
         dataset_link: Optional[str],
-        model_link: str,
-        encountered_datasets: set
+        model_link: str
     ) -> Dict[str, Any]:
         """
         Analyzes a complete entry with code, dataset, and model links.
 
         Handles cases where code/dataset links may be empty and determines
         the appropriate analysis strategy based on available information.
-        Tracks encountered datasets to support shared dataset inference.
 
         Args:
             code_link: Optional URL to code repository
             dataset_link: Optional URL to dataset (HF datasets, ImageNet, etc.)
             model_link: Required URL to ML model (typically Hugging Face)
-            encountered_datasets: Set to track previously seen datasets
 
         Returns:
             Dictionary containing all computed metrics and combined scores
@@ -309,9 +306,7 @@ class MetricsCalculator:
         if not primary_repo_url:
             primary_repo_url = model_link
 
-        # Handle dataset tracking
-        if dataset_link:
-            encountered_datasets.add(dataset_link)
+        # Note: Dataset tracking removed as it was not being used
 
         # Analyze the primary repository
         repo_metrics = (await self.analyze_repository(primary_repo_url)

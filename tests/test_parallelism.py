@@ -24,7 +24,6 @@ async def test_parallelism_performance(
     entries = [(f"https://github.com/test/repo{i}",
                 None, f"https://huggingface.co/model{i}")
                for i in range(4)]
-    encountered_datasets = set()
 
     # --- Mock API Clients ---
 
@@ -64,13 +63,13 @@ async def test_parallelism_performance(
     start_time_seq = time.time()
     with ThreadPoolExecutor(max_workers=4) as pool:
         for entry in entries:
-            await analyze_entry(entry, pool, encountered_datasets)
+            await analyze_entry(entry, pool)
     sequential_time = time.time() - start_time_seq
 
     # --- Test Concurrent Execution ---
     start_time_para = time.time()
     with ThreadPoolExecutor(max_workers=4) as pool:
-        tasks = [analyze_entry(entry, pool, encountered_datasets)
+        tasks = [analyze_entry(entry, pool)
                  for entry in entries]
         await asyncio.gather(*tasks)
     parallel_time = time.time() - start_time_para
