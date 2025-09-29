@@ -9,6 +9,45 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.metrics.metrics_calculator import MetricsCalculator
 
+
+# --- Environment validation ---
+def validate_environment():
+    """Validate environment variables and handle invalid values."""
+    # Validate GitHub token if provided
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token and not github_token.strip():
+        print("Error: Invalid GitHub token", file=sys.stderr)
+        sys.exit(1)
+
+    # Validate log file path if provided
+    log_file = os.environ.get("LOG_FILE")
+    if log_file:
+        try:
+            # Test if we can write to the log file path
+            with open(log_file, 'a'):
+                pass
+        except (OSError, IOError) as e:
+            print(f"Error: Invalid log file path: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Handle log level 0 - create blank log file
+    log_level = os.environ.get("LOG_LEVEL", "0")
+    if log_level == "0" and log_file:
+        # Create a blank log file for level 0
+        try:
+            with open(log_file, 'w'):
+                pass
+        except (OSError, IOError) as e:
+            print(
+                f"Error: Failed to create blank log file: {e}",
+                file=sys.stderr)
+            sys.exit(1)
+
+
+# Validate environment before setting up logging
+validate_environment()
+
+
 # --- Logging setup ---
 # Adheres to the LOG_FILE and LOG_LEVEL environment variable
 # requirements
@@ -221,10 +260,10 @@ async def process_entries(
                     "code_quality": 0.0,
                     "code_quality_latency": 0,
                 }
-                print(json.dumps(default_scorecard))
+                print(json.dumps(default_scorecard, separators=(',', ':')))
             else:
                 # Prints output to stdout in NDJSON format
-                print(json.dumps(result))
+                print(json.dumps(result, separators=(',', ':')))
 
 
 def main():
