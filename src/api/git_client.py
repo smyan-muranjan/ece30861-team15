@@ -187,8 +187,8 @@ class GitClient:
                             )
                         except (ValueError, IndexError):
                             lint_errors = 0
-            except Exception as e:
-                logging.warning(f"Failed to run flake8: {str(e)}")
+            except Exception:
+                # logging.warning(f"Failed to run flake8: {str(e)}")
                 lint_errors = 0
 
             # Calculate code quality score
