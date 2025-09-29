@@ -15,38 +15,15 @@ def validate_environment():
     """Validate environment variables and handle invalid values."""
     # Validate GitHub token if provided
     github_token = os.environ.get("GITHUB_TOKEN")
-    if github_token is not None:
-        # Check if token is empty or contains only whitespace
-        if not github_token.strip():
-            print("Error: Invalid GitHub token", file=sys.stderr)
-            sys.exit(1)
-        # Check if token has reasonable length
-        elif len(github_token.strip()) < 10:
-            print("Error: Invalid GitHub token", file=sys.stderr)
-            sys.exit(1)
+    if github_token and not github_token.strip():
+        print("Error: Invalid GitHub token", file=sys.stderr)
+        sys.exit(1)
 
     # Validate log file path if provided
     log_file = os.environ.get("LOG_FILE")
-    if log_file is not None:
-        # Check if path is empty or contains only whitespace
-        if not log_file.strip():
-            print("Error: Invalid log file path", file=sys.stderr)
-            sys.exit(1)
-
-        # Normalize the path
-        log_file = log_file.strip()
-
-        # Check if directory exists, create if it doesn't
-        log_dir = os.path.dirname(log_file)
-        if log_dir and not os.path.exists(log_dir):
-            try:
-                os.makedirs(log_dir, exist_ok=True)
-            except (OSError, IOError) as e:
-                print(f"Error: Invalid log file path: {e}", file=sys.stderr)
-                sys.exit(1)
-
-        # Test if we can write to the log file path
+    if log_file:
         try:
+            # Test if we can write to the log file path
             with open(log_file, 'a'):
                 pass
         except (OSError, IOError) as e:
@@ -176,7 +153,8 @@ def calculate_net_score(metrics: Dict[str, Any]) -> float:
 
 async def analyze_entry(
     entry: Tuple[Optional[str], Optional[str], str],
-    process_pool: ProcessPoolExecutor
+    process_pool: ProcessPoolExecutor,
+    encountered_datasets: set
 ) -> Dict[str, Any]:
     """
     Analyzes a single entry containing code, dataset, and model links,
@@ -188,7 +166,7 @@ async def analyze_entry(
     github_token = os.environ.get("GITHUB_TOKEN")
     calculator = MetricsCalculator(process_pool, github_token)
     local_metrics = await calculator.analyze_entry(
-        code_link, dataset_link, model_link
+        code_link, dataset_link, model_link, encountered_datasets
     )
 
     net_score = calculate_net_score(local_metrics)
@@ -245,8 +223,11 @@ async def process_entries(
     max_workers = os.cpu_count() or 4
     logging.info("Using %d worker processes.", max_workers)
 
+    # Track encountered datasets to handle shared datasets
+    encountered_datasets: set[str] = set()
+
     with ProcessPoolExecutor(max_workers=max_workers) as process_pool:
-        tasks = [analyze_entry(entry, process_pool)
+        tasks = [analyze_entry(entry, process_pool, encountered_datasets)
                  for entry in entries]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
