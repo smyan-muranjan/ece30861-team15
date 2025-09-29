@@ -1,5 +1,0 @@
-Analyze this README content for performance metrics and benchmarks:
-
-{processed_readme}
-
-JSON response:
