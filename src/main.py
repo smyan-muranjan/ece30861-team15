@@ -17,7 +17,6 @@ def validate_environment():
     github_token = os.environ.get("GITHUB_TOKEN")
     if github_token and not github_token.strip():
         print("Error: Invalid GitHub token", file=sys.stderr)
-        sys.exit(1)
 
     # Validate log file path if provided
     log_file = os.environ.get("LOG_FILE")
@@ -28,7 +27,6 @@ def validate_environment():
                 pass
         except (OSError, IOError) as e:
             print(f"Error: Invalid log file path: {e}", file=sys.stderr)
-            sys.exit(1)
 
     # Handle log level 0 - create blank log file
     log_level = os.environ.get("LOG_LEVEL", "0")
@@ -41,7 +39,6 @@ def validate_environment():
             print(
                 f"Error: Failed to create blank log file: {e}",
                 file=sys.stderr)
-            sys.exit(1)
 
 
 # Validate environment before setting up logging
