@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from io import StringIO
 from unittest.mock import MagicMock, patch
@@ -105,11 +106,10 @@ async def test_analyze_entry(mock_analyze_entry_method):
     }
     entry = ("https://github.com/test/repo",
              None, "https://huggingface.co/model")
-    encountered_datasets = set()
 
     with ProcessPoolExecutor() as pool:
         # Await the async function and pass the required process pool
-        scorecard = await main.analyze_entry(entry, pool, encountered_datasets)
+        scorecard = await main.analyze_entry(entry, pool)
 
     assert 'net_score' in scorecard
     assert scorecard['net_score'] > 0
@@ -147,3 +147,256 @@ def test_main_function_with_file(mock_process_entries, mock_parse_url):
             mock_parse_url.assert_called_with('some_file.txt')
             # Check that asyncio.run was called with our mocked function
             mock_asyncio_run.assert_called_once()
+
+
+def test_parse_url_file_invalid_format():
+    """Tests URL parser handles invalid format lines correctly."""
+    file_path = "test_invalid_urls.txt"
+    entries_to_write = [
+        "https://github.com/test/repo1, https://huggingface.co/model1",
+        ",,",  # Empty model link
+        "https://github.com/test/repo4, \
+        https://huggingface.co/datasets/test, \
+        https://huggingface.co/model4",  # Valid
+    ]
+    with open(file_path, "w") as f:
+        for entry in entries_to_write:
+            f.write(entry + "\n")
+
+    parsed_entries = main.parse_url_file(file_path)
+    # Should only return the valid entry
+    expected = [
+        ("https://github.com/test/repo4",
+         "https://huggingface.co/datasets/test",
+         "https://huggingface.co/model4")
+    ]
+    assert parsed_entries == expected
+
+    os.remove(file_path)
+
+
+def test_calculate_net_score():
+    """Tests net score calculation with various metric values."""
+    # Test with all metrics present
+    metrics = {
+        'license': 0.8,
+        'ramp_up_time': 0.7,
+        'dataset_and_code_score': 0.9,
+        'performance_claims': 0.6,
+        'bus_factor': 0.85,
+        'code_quality': 0.75,
+        'dataset_quality': 0.8,
+    }
+    score = main.calculate_net_score(metrics)
+    assert 0.0 <= score <= 1.0
+
+    # Test with missing metrics (should default to 0.0)
+    partial_metrics = {
+        'license': 0.8,
+        'ramp_up_time': 0.7,
+    }
+    score = main.calculate_net_score(partial_metrics)
+    assert 0.0 <= score <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_process_entries_with_exceptions():
+    """Tests process_entries handles exceptions correctly."""
+    old_stdout = sys.stdout
+    sys.stdout = captured_output = StringIO()
+
+    entries = [
+        ("https://github.com/test/repo1",
+            None, "https://huggingface.co/model1"),
+        ("https://github.com/test/repo2",
+            None, "https://huggingface.co/model2"),
+    ]
+
+    # Mock analyze_entry to raise an exception for the first entry
+    with patch('src.main.analyze_entry') as mock_analyze_entry:
+        mock_analyze_entry.side_effect = [
+            Exception("Analysis failed"),
+            {"url": "https://huggingface.co/model2", "net_score": 0.8},
+        ]
+
+        await main.process_entries(entries)
+
+    sys.stdout = old_stdout
+    output = captured_output.getvalue().strip().split('\n')
+
+    # Should have 2 outputs (one for exception, one for success)
+    assert len(output) == 2
+
+    # Both should be valid JSON
+    for line in output:
+        json.loads(line)
+
+
+# Environment validation tests
+def test_validate_environment_invalid_github_token_empty():
+    """Test validate_environment with empty GitHub token."""
+    with patch.dict(os.environ, {'GITHUB_TOKEN': ''}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_invalid_github_token_whitespace():
+    """Test validate_environment with whitespace-only GitHub token."""
+    with patch.dict(os.environ, {'GITHUB_TOKEN': '   '}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_invalid_github_token_short():
+    """Test validate_environment with short GitHub token."""
+    with patch.dict(os.environ, {'GITHUB_TOKEN': 'abc'}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_invalid_log_file_empty():
+    """Test validate_environment with empty log file path."""
+    with patch.dict(os.environ, {'LOG_FILE': ''}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_invalid_log_file_whitespace():
+    """Test validate_environment with whitespace-only log file path."""
+    with patch.dict(os.environ, {'LOG_FILE': '   '}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_log_file_directory_creation():
+    """Test validate_environment creates directory for log file."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_file = os.path.join(temp_dir, 'subdir', 'test.log')
+        with patch.dict(os.environ, {'LOG_FILE': log_file}, clear=True):
+            # Should not raise exception and should create directory
+            main.validate_environment()
+            assert os.path.exists(os.path.dirname(log_file))
+
+
+def test_validate_environment_log_file_directory_creation_failure():
+    """Test validate_environment handles directory creation failure."""
+    # Use a path that will fail to create (root directory)
+    log_file = '/root/test.log'
+    with patch.dict(os.environ, {'LOG_FILE': log_file}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_log_file_write_failure():
+    """Test validate_environment handles log file write failure."""
+    # Use a path that exists but is not writable
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a file and make it read-only
+        log_file = os.path.join(temp_dir, 'readonly.log')
+        with open(log_file, 'w') as f:
+            f.write('test')
+        os.chmod(log_file, 0o444)  # Read-only
+
+        with patch.dict(os.environ, {'LOG_FILE': log_file}, clear=True):
+            with pytest.raises(SystemExit) as e:
+                main.validate_environment()
+            assert e.value.code == 1
+
+
+def test_validate_environment_log_level_0_blank_file_creation():
+    """Test validate_environment creates blank log file for level 0."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_file = os.path.join(temp_dir, 'test.log')
+        with patch.dict(os.environ,
+                        {'LOG_LEVEL': '0', 'LOG_FILE': log_file},
+                        clear=True):
+            main.validate_environment()
+            assert os.path.exists(log_file)
+            # File should be empty (blank)
+            with open(log_file, 'r') as f:
+                assert f.read() == ''
+
+
+def test_validate_environment_log_level_0_blank_file_creation_failure():
+    """Test validate_environment handles blank file creation failure."""
+    # Use a path that will fail to write
+    log_file = '/root/test.log'
+    with patch.dict(os.environ,
+                    {'LOG_LEVEL': '0', 'LOG_FILE': log_file}, clear=True):
+        with pytest.raises(SystemExit) as e:
+            main.validate_environment()
+        assert e.value.code == 1
+
+
+def test_validate_environment_valid_inputs():
+    """Test validate_environment with valid inputs."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        log_file = os.path.join(temp_dir, 'test.log')
+        with patch.dict(os.environ, {
+            'GITHUB_TOKEN': 'ghp_1234567890abcdef1234567890abcdef12345678',
+            'LOG_FILE': log_file
+        }, clear=True):
+            # Should not raise exception
+            main.validate_environment()
+
+
+def test_logging_config_level_0():
+    """Test logging configuration with level 0 (disabled)."""
+    with patch.dict(os.environ, {'LOG_LEVEL': '0'}, clear=True):
+        # Re-import main to trigger logging setup
+        import importlib
+        importlib.reload(main)
+
+        # Test that logging is disabled
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = StringIO()
+
+        main.logging.info("Test message")
+        main.logging.debug("Debug message")
+
+        sys.stdout = old_stdout
+        output = captured_output.getvalue()
+        assert output == ""  # No output because logging is disabled
+
+
+# Additional error handling tests
+def test_validate_environment_log_file_directory_creation_error_handling():
+    """Test validate_environment error handling for directory creation."""
+    # Mock os.makedirs to raise an exception
+    with patch('os.makedirs', side_effect=OSError("Permission denied")):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_file = os.path.join(temp_dir, 'subdir', 'test.log')
+            with patch.dict(os.environ, {'LOG_FILE': log_file}, clear=True):
+                with pytest.raises(SystemExit) as e:
+                    main.validate_environment()
+                assert e.value.code == 1
+
+
+def test_validate_environment_log_level_0_blank_file_creation_error_handling():
+    """Test validate_environment error handling for blank file creation."""
+    # Mock open to raise an exception
+    with patch('builtins.open', side_effect=OSError("Permission denied")):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            log_file = os.path.join(temp_dir, 'test.log')
+            with patch.dict(
+                    os.environ,
+                    {'LOG_LEVEL': '0', 'LOG_FILE': log_file},
+                    clear=True):
+                with pytest.raises(SystemExit) as e:
+                    main.validate_environment()
+                assert e.value.code == 1
+
+
+# Main entry point test
+def test_main_entry_point():
+    """Test the main entry point when script is run directly."""
+    with patch.object(sys, 'argv', ['src/main.py', 'nonexistent.txt']):
+        with pytest.raises(SystemExit) as e:
+            main.main()
+        assert e.value.code == 1
