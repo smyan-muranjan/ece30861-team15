@@ -146,3 +146,86 @@ def test_main_function_with_file(mock_process_entries, mock_parse_url):
             mock_parse_url.assert_called_with('some_file.txt')
             # Check that asyncio.run was called with our mocked function
             mock_asyncio_run.assert_called_once()
+
+
+def test_parse_url_file_invalid_format():
+    """Tests URL parser handles invalid format lines correctly."""
+    file_path = "test_invalid_urls.txt"
+    entries_to_write = [
+        "https://github.com/test/repo1, https://huggingface.co/model1",
+        ",,",  # Empty model link
+        "https://github.com/test/repo4, \
+        https://huggingface.co/datasets/test, \
+        https://huggingface.co/model4",  # Valid
+    ]
+    with open(file_path, "w") as f:
+        for entry in entries_to_write:
+            f.write(entry + "\n")
+
+    parsed_entries = main.parse_url_file(file_path)
+    # Should only return the valid entry
+    expected = [
+        ("https://github.com/test/repo4",
+         "https://huggingface.co/datasets/test",
+         "https://huggingface.co/model4")
+    ]
+    assert parsed_entries == expected
+
+    os.remove(file_path)
+
+
+def test_calculate_net_score():
+    """Tests net score calculation with various metric values."""
+    # Test with all metrics present
+    metrics = {
+        'license': 0.8,
+        'ramp_up_time': 0.7,
+        'dataset_and_code_score': 0.9,
+        'performance_claims': 0.6,
+        'bus_factor': 0.85,
+        'code_quality': 0.75,
+        'dataset_quality': 0.8,
+    }
+    score = main.calculate_net_score(metrics)
+    assert 0.0 <= score <= 1.0
+
+    # Test with missing metrics (should default to 0.0)
+    partial_metrics = {
+        'license': 0.8,
+        'ramp_up_time': 0.7,
+    }
+    score = main.calculate_net_score(partial_metrics)
+    assert 0.0 <= score <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_process_entries_with_exceptions():
+    """Tests process_entries handles exceptions correctly."""
+    old_stdout = sys.stdout
+    sys.stdout = captured_output = StringIO()
+
+    entries = [
+        ("https://github.com/test/repo1",
+            None, "https://huggingface.co/model1"),
+        ("https://github.com/test/repo2",
+            None, "https://huggingface.co/model2"),
+    ]
+
+    # Mock analyze_entry to raise an exception for the first entry
+    with patch('src.main.analyze_entry') as mock_analyze_entry:
+        mock_analyze_entry.side_effect = [
+            Exception("Analysis failed"),
+            {"url": "https://huggingface.co/model2", "net_score": 0.8},
+        ]
+
+        await main.process_entries(entries)
+
+    sys.stdout = old_stdout
+    output = captured_output.getvalue().strip().split('\n')
+
+    # Should have 2 outputs (one for exception, one for success)
+    assert len(output) == 2
+
+    # Both should be valid JSON
+    for line in output:
+        json.loads(line)
