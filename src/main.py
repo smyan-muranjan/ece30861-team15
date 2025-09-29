@@ -20,7 +20,7 @@ def validate_environment():
         if not github_token.strip():
             print("Error: Invalid GitHub token", file=sys.stderr)
             sys.exit(1)
-        # Check if token has reasonable length (GitHub tokens are typically 40+ chars)
+        # Check if token has reasonable length
         elif len(github_token.strip()) < 10:
             print("Error: Invalid GitHub token", file=sys.stderr)
             sys.exit(1)
@@ -32,10 +32,10 @@ def validate_environment():
         if not log_file.strip():
             print("Error: Invalid log file path", file=sys.stderr)
             sys.exit(1)
-        
+
         # Normalize the path
         log_file = log_file.strip()
-        
+
         # Check if directory exists, create if it doesn't
         log_dir = os.path.dirname(log_file)
         if log_dir and not os.path.exists(log_dir):
@@ -44,7 +44,7 @@ def validate_environment():
             except (OSError, IOError) as e:
                 print(f"Error: Invalid log file path: {e}", file=sys.stderr)
                 sys.exit(1)
-        
+
         # Test if we can write to the log file path
         try:
             with open(log_file, 'a'):
