@@ -44,7 +44,8 @@ exit 0
         else
             echo "Usage:"
             echo "./run install                # Install dependencies"
-            echo "./run test          # Run the test suite"
+            echo "./run test          
+                     # Run the test suite"
             echo "./run path/to/your/urls.txt  # Process URLs"
             exit 1
         fi
